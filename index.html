@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Retailer Login</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<h2>Retailer Login</h2>
+
+<input type="text" id="mobile" placeholder="Mobile"><br><br>
+<input type="text" id="password" placeholder="Password"><br><br>
+
+<button onclick="login()">Login</button>
+
+<p id="msg"></p>
+
+<script>
+const supabase = window.supabase.createClient(
+  "https://xgcegevvccpjvcjbuyfa.supabase.co",
+  "sb_publishable_Z3B6UOMFKorAOYaIgiJhqg_olYM8c07"
+);
+
+async function login() {
+
+  const mobile = document.getElementById("mobile").value;
+  const password = document.getElementById("password").value;
+
+  const { data, error } = await supabase
+    .from("retailers")
+    .select("*")
+    .eq("mobile", mobile)
+    .eq("password", password);
+
+  if (error) {
+    document.getElementById("msg").innerText = "Error: " + error.message;
+  } else if (data.length === 0) {
+    document.getElementById("msg").innerText = "Invalid Login";
+  } else {
+    document.getElementById("msg").innerText = "Login Successful";
+  }
+}
+</script>
+
+</body>
+</html>
