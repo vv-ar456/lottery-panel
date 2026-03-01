@@ -1,43 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Retailer Dashboard</title>
+<title>Retailer Panel</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-
-<style>
-body{font-family:Arial;background:#f4f6f9;text-align:center;}
-.card{background:white;padding:20px;margin:20px auto;width:320px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.1);}
-input{width:90%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #ccc;}
-button{padding:10px 20px;background:#007bff;color:white;border:none;border-radius:6px;cursor:pointer;}
-.box{background:white;padding:15px;margin:10px;border-radius:10px;display:inline-block;width:140px;}
-</style>
 </head>
 <body>
 
-<div class="card" id="loginBox">
 <h2>Retailer Login</h2>
-<input id="mobile" placeholder="Mobile">
-<input id="password" placeholder="Password">
+<div id="loginBox">
+<input id="mobile" placeholder="Mobile"><br>
+<input id="password" placeholder="Password"><br>
 <button onclick="login()">Login</button>
 </div>
 
 <div id="dashboard" style="display:none;">
-<h2>Dashboard</h2>
 
-<div class="box">Assigned<br><span id="assigned"></span></div>
-<div class="box">Sold<br><span id="sold"></span></div>
-<div class="box">Remaining<br><span id="remaining"></span></div>
-<div class="box">Earning ₹<br><span id="earning"></span></div>
+<h3>Dashboard</h3>
+Assigned: <span id="assigned"></span><br>
+Sold: <span id="sold"></span><br>
+Remaining: <span id="remaining"></span><br>
+Earning: ₹<span id="earning"></span><br><br>
 
-<div class="card">
-<h3>Sell Ticket</h3>
-<input id="sellTicket" placeholder="Enter Ticket No">
-<button onclick="sellTicket()">Sell (Manual)</button>
-<button onclick="startScanner()">Scan</button>
-<div id="reader"></div>
-<p id="msg"></p>
-</div>
+<h3>My Assigned Tickets</h3>
+<div id="myTickets"></div>
+
+<h3>Sell Tickets (Max 10)</h3>
+<input id="customerName" placeholder="Customer Name"><br>
+<input id="customerMobile" placeholder="Customer Mobile"><br>
+<textarea id="bulkSell" placeholder="Enter ticket numbers comma separated"></textarea><br>
+<button onclick="bulkSell()">Sell Tickets</button>
 
 </div>
 
@@ -51,6 +43,7 @@ const client = window.supabase.createClient(
 let currentMobile="";
 
 async function login(){
+
 let mobile=document.getElementById("mobile").value;
 let password=document.getElementById("password").value;
 
@@ -64,11 +57,12 @@ document.getElementById("loginBox").style.display="none";
 document.getElementById("dashboard").style.display="block";
 
 updateDashboard();
+loadMyTickets();
 }
 
 async function updateDashboard(){
-let {data}=await client.from("retailers").select("*")
-.eq("mobile",currentMobile).single();
+let {data}=await client.from("retailers")
+.select("*").eq("mobile",currentMobile).single();
 
 document.getElementById("assigned").innerText=data.assigned;
 document.getElementById("sold").innerText=data.sold;
@@ -76,43 +70,53 @@ document.getElementById("remaining").innerText=data.remaining;
 document.getElementById("earning").innerText=data.earning;
 }
 
-async function sellTicketManual(ticket){
+async function loadMyTickets(){
+let {data}=await client.from("tickets")
+.select("*").eq("retailer_mobile",currentMobile)
+.eq("status","assigned");
 
-let {data}=await client.from("tickets").select("*")
-.eq("ticket_no",ticket).eq("retailer_mobile",currentMobile).single();
+let list="";
+data.forEach(t=>{list+=t.ticket_no+" , ";});
+document.getElementById("myTickets").innerText=list;
+}
 
-if(!data){alert("Invalid Ticket");return;}
+async function bulkSell(){
 
-await client.from("tickets").update({status:"sold"})
-.eq("ticket_no",ticket);
+let tickets=document.getElementById("bulkSell").value.split(",");
+if(tickets.length>10){alert("Max 10 allowed");return;}
 
-let {data:r}=await client.from("retailers").select("*")
-.eq("mobile",currentMobile).single();
+let cname=document.getElementById("customerName").value;
+let cmobile=document.getElementById("customerMobile").value;
+
+for(let t of tickets){
+
+t=t.trim();
+
+let {data}=await client.from("tickets")
+.select("*").eq("ticket_no",t)
+.eq("retailer_mobile",currentMobile).single();
+
+if(!data || data.status!="assigned") continue;
+
+await client.from("tickets").update({
+status:"sold",
+customer_name:cname,
+customer_mobile:cmobile
+}).eq("ticket_no",t);
+
+let {data:r}=await client.from("retailers")
+.select("*").eq("mobile",currentMobile).single();
 
 await client.from("retailers").update({
 sold:r.sold+1,
 remaining:r.remaining-1,
-earning:r.earning+10
+earning:r.earning+data.price
 }).eq("mobile",currentMobile);
+}
 
 updateDashboard();
-}
-
-function sellTicket(){
-let ticket=document.getElementById("sellTicket").value;
-sellTicketManual(ticket);
-}
-
-function startScanner(){
-const html5QrCode = new Html5Qrcode("reader");
-html5QrCode.start(
-{ facingMode: "environment" },
-{ fps: 10, qrbox: 250 },
-ticket => {
-sellTicketManual(ticket);
-html5QrCode.stop();
-}
-);
+loadMyTickets();
+alert("Tickets Sold");
 }
 
 </script>
