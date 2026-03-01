@@ -5,34 +5,33 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 body{font-family:Arial;background:#f4f6f9;text-align:center;}
-.card{background:white;padding:20px;margin:20px auto;width:350px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.1);}
-input,select{width:90%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #ccc;}
-button{padding:10px 20px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;}
+.card{background:white;padding:20px;margin:20px auto;width:400px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.1);}
+input,textarea{width:95%;padding:8px;margin:6px 0;border-radius:6px;border:1px solid #ccc;}
+button{padding:8px 15px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;}
 table{width:95%;margin:20px auto;border-collapse:collapse;background:white;}
-th,td{padding:10px;border:1px solid #ddd;}
+th,td{padding:8px;border:1px solid #ddd;}
 th{background:#007bff;color:white;}
 </style>
 </head>
 <body>
 
 <div class="card">
-<h2>Add Retailer</h2>
-<input id="name" placeholder="Name">
-<input id="mobile" placeholder="Mobile">
-<input id="password" placeholder="Password">
-<button onclick="addRetailer()">Add Retailer</button>
+<h3>Change Ticket Price</h3>
+<input id="newPrice" placeholder="New Price">
+<button onclick="changePrice()">Update Price</button>
+<p id="priceMsg"></p>
 </div>
 
 <div class="card">
-<h2>Assign Ticket</h2>
-<input id="ticketNo" placeholder="Ticket Number">
+<h3>Bulk Assign Tickets</h3>
+<textarea id="bulkTickets" placeholder="Enter ticket numbers comma separated"></textarea>
 <input id="retailerMobile" placeholder="Retailer Mobile">
-<button onclick="assignTicket()">Assign Ticket</button>
-<p id="msg"></p>
+<button onclick="bulkAssign()">Assign</button>
+<p id="assignMsg"></p>
 </div>
 
-<h2>Retailers</h2>
-<table id="table"></table>
+<h3>All Tickets</h3>
+<table id="ticketTable"></table>
 
 <script>
 
@@ -41,52 +40,92 @@ const client = window.supabase.createClient(
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnY2VnZXZ2Y2NwanZjamJ1eWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTkwMjgsImV4cCI6MjA4Nzg5NTAyOH0.-k2CKY0GB389tH0EGSpIncsG2R6A8H3Zaxehw265-Ic"
 );
 
-async function addRetailer(){
-let name=name=document.getElementById("name").value;
-let mobile=document.getElementById("mobile").value;
-let password=document.getElementById("password").value;
-
-await client.from("retailers").insert([{name,mobile,password,assigned:0,sold:0,remaining:0,earning:0}]);
-loadRetailers();
+async function changePrice(){
+let price=document.getElementById("newPrice").value;
+await client.from("settings").update({ticket_price:price}).eq("id",1);
+document.getElementById("priceMsg").innerText="Price Updated";
 }
 
-async function assignTicket(){
+async function bulkAssign(){
 
-let ticket=document.getElementById("ticketNo").value;
+let tickets=document.getElementById("bulkTickets").value.split(",");
 let mobile=document.getElementById("retailerMobile").value;
 
-await client.from("tickets").insert([{ticket_no:ticket,retailer_mobile:mobile,status:"assigned"}]);
+for(let t of tickets){
 
-let {data}=await client.from("retailers").select("*").eq("mobile",mobile).single();
+t=t.trim();
 
-await client.from("retailers").update({
-assigned:data.assigned+1,
-remaining:data.remaining+1
-}).eq("mobile",mobile);
+let {data}=await client.from("tickets")
+.select("*").eq("ticket_no",t).single();
 
-document.getElementById("msg").innerText="Ticket Assigned";
-loadRetailers();
+if(data && data.status!="sold"){
+continue; // skip if already assigned
 }
 
-async function loadRetailers(){
-let {data}=await client.from("retailers").select("*");
-let table=document.getElementById("table");
+let {data:priceData}=await client.from("settings").select("*").single();
 
-table.innerHTML="<tr><th>Name</th><th>Mobile</th><th>Assigned</th><th>Sold</th><th>Remaining</th><th>Earning</th></tr>";
+await client.from("tickets").insert([{
+ticket_no:t,
+retailer_mobile:mobile,
+status:"assigned",
+price:priceData.ticket_price
+}]);
 
-data.forEach(r=>{
-table.innerHTML+=`<tr>
-<td>${r.name}</td>
-<td>${r.mobile}</td>
-<td>${r.assigned}</td>
-<td>${r.sold}</td>
-<td>${r.remaining}</td>
-<td>${r.earning}</td>
+let {data:r}=await client.from("retailers").select("*")
+.eq("mobile",mobile).single();
+
+await client.from("retailers").update({
+assigned:r.assigned+1,
+remaining:r.remaining+1
+}).eq("mobile",mobile);
+
+}
+
+document.getElementById("assignMsg").innerText="Bulk Assign Completed";
+loadTickets();
+}
+
+async function deleteTicket(id){
+
+let {data}=await client.from("tickets").select("*")
+.eq("id",id).single();
+
+if(data.status!="sold"){
+await client.from("tickets").delete().eq("id",id);
+
+let {data:r}=await client.from("retailers").select("*")
+.eq("mobile",data.retailer_mobile).single();
+
+await client.from("retailers").update({
+assigned:r.assigned-1,
+remaining:r.remaining-1
+}).eq("mobile",data.retailer_mobile);
+}
+
+loadTickets();
+}
+
+async function loadTickets(){
+
+let {data}=await client.from("tickets").select("*");
+
+let table=document.getElementById("ticketTable");
+
+table.innerHTML="<tr><th>No</th><th>Retailer</th><th>Status</th><th>Price</th><th>Action</th></tr>";
+
+data.forEach(t=>{
+table.innerHTML+=`
+<tr>
+<td>${t.ticket_no}</td>
+<td>${t.retailer_mobile}</td>
+<td>${t.status}</td>
+<td>${t.price}</td>
+<td><button onclick="deleteTicket(${t.id})">Delete</button></td>
 </tr>`;
 });
 }
 
-loadRetailers();
+loadTickets();
 
 </script>
 </body>
