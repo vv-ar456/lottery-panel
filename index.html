@@ -11,12 +11,13 @@
 <input type="text" id="mobile" placeholder="Mobile"><br><br>
 <input type="text" id="password" placeholder="Password"><br><br>
 
-<button onclick="login()">Login</button>
+<button id="loginBtn">Login</button>
 
 <p id="msg"></p>
 
 <script>
-const supabase = window.supabase.createClient(
+
+const client = window.supabase.createClient(
   "https://xgcegevvccpjvcjbuyfa.supabase.co",
   "sb_publishable_Z3B6UOMFKorAOYaIgiJhqg_olYM8c07"
 );
@@ -26,7 +27,7 @@ async function login() {
   const mobile = document.getElementById("mobile").value;
   const password = document.getElementById("password").value;
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("retailers")
     .select("*")
     .eq("mobile", mobile)
@@ -34,12 +35,17 @@ async function login() {
 
   if (error) {
     document.getElementById("msg").innerText = "Error: " + error.message;
-  } else if (data.length === 0) {
+  } 
+  else if (!data || data.length === 0) {
     document.getElementById("msg").innerText = "Invalid Login";
-  } else {
+  } 
+  else {
     document.getElementById("msg").innerText = "Login Successful";
   }
 }
+
+document.getElementById("loginBtn").addEventListener("click", login);
+
 </script>
 
 </body>
