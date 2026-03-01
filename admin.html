@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<h2>Add Retailer</h2>
+
+<input type="text" id="name" placeholder="Name"><br><br>
+<input type="text" id="mobile" placeholder="Mobile"><br><br>
+<input type="text" id="password" placeholder="Password"><br><br>
+
+<button onclick="addRetailer()">Add Retailer</button>
+
+<p id="msg"></p>
+
+<script>
+const supabase = window.supabase.createClient(
+  "https://xgcegevvccpjvcjbuyfa.supabase.co",
+  "sb_publishable_Z3B6UOMFKorAOYaIgiJhqg_olYM8c07"
+);
+
+async function addRetailer() {
+
+  const name = document.getElementById("name").value;
+  const mobile = document.getElementById("mobile").value;
+  const password = document.getElementById("password").value;
+
+  const { data, error } = await supabase
+    .from("retailers")
+    .insert([{ name, mobile, password }]);
+
+  if (error) {
+    document.getElementById("msg").innerText = "Error: " + error.message;
+  } else {
+    document.getElementById("msg").innerText = "Retailer Added Successfully";
+  }
+}
+</script>
+
+</body>
+</html>
