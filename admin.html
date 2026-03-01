@@ -3,76 +3,36 @@
 <head>
 <title>Admin Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-body{
-font-family:Arial;
-background:#f4f6f9;
-text-align:center;
-}
-.card{
-background:white;
-padding:20px;
-margin:40px auto;
-width:350px;
-border-radius:12px;
-box-shadow:0 6px 18px rgba(0,0,0,0.1);
-}
-input{
-width:90%;
-padding:10px;
-margin:8px 0;
-border-radius:6px;
-border:1px solid #ccc;
-}
-button{
-padding:10px 20px;
-background:#28a745;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
-}
-table{
-width:90%;
-margin:20px auto;
-border-collapse:collapse;
-background:white;
-box-shadow:0 5px 12px rgba(0,0,0,0.1);
-}
-th,td{
-padding:10px;
-border:1px solid #ddd;
-}
-th{
-background:#007bff;
-color:white;
-}
+body{font-family:Arial;background:#f4f6f9;text-align:center;}
+.card{background:white;padding:20px;margin:20px auto;width:350px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.1);}
+input,select{width:90%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #ccc;}
+button{padding:10px 20px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;}
+table{width:95%;margin:20px auto;border-collapse:collapse;background:white;}
+th,td{padding:10px;border:1px solid #ddd;}
+th{background:#007bff;color:white;}
 </style>
 </head>
 <body>
 
 <div class="card">
 <h2>Add Retailer</h2>
-<input id="name" placeholder="Name"><br>
-<input id="mobile" placeholder="Mobile"><br>
-<input id="password" placeholder="Password"><br>
+<input id="name" placeholder="Name">
+<input id="mobile" placeholder="Mobile">
+<input id="password" placeholder="Password">
 <button onclick="addRetailer()">Add Retailer</button>
+</div>
+
+<div class="card">
+<h2>Assign Ticket</h2>
+<input id="ticketNo" placeholder="Ticket Number">
+<input id="retailerMobile" placeholder="Retailer Mobile">
+<button onclick="assignTicket()">Assign Ticket</button>
 <p id="msg"></p>
 </div>
 
-<h2>Retailers List</h2>
-
-<table id="table">
-<tr>
-<th>Name</th>
-<th>Mobile</th>
-<th>Assigned</th>
-<th>Sold</th>
-<th>Remaining</th>
-<th>Earning</th>
-</tr>
-</table>
+<h2>Retailers</h2>
+<table id="table"></table>
 
 <script>
 
@@ -82,42 +42,40 @@ const client = window.supabase.createClient(
 );
 
 async function addRetailer(){
-
-let name=document.getElementById("name").value;
+let name=name=document.getElementById("name").value;
 let mobile=document.getElementById("mobile").value;
 let password=document.getElementById("password").value;
 
-const {error}=await client
-.from("retailers")
-.insert([{name,mobile,password,assigned:0,sold:0,remaining:0,earning:0}]);
-
-if(error){
-document.getElementById("msg").innerText="Error adding retailer";
-}else{
-document.getElementById("msg").innerText="Retailer Added Successfully";
+await client.from("retailers").insert([{name,mobile,password,assigned:0,sold:0,remaining:0,earning:0}]);
 loadRetailers();
 }
+
+async function assignTicket(){
+
+let ticket=document.getElementById("ticketNo").value;
+let mobile=document.getElementById("retailerMobile").value;
+
+await client.from("tickets").insert([{ticket_no:ticket,retailer_mobile:mobile,status:"assigned"}]);
+
+let {data}=await client.from("retailers").select("*").eq("mobile",mobile).single();
+
+await client.from("retailers").update({
+assigned:data.assigned+1,
+remaining:data.remaining+1
+}).eq("mobile",mobile);
+
+document.getElementById("msg").innerText="Ticket Assigned";
+loadRetailers();
 }
 
 async function loadRetailers(){
-
-const {data}=await client.from("retailers").select("*");
-
+let {data}=await client.from("retailers").select("*");
 let table=document.getElementById("table");
 
-table.innerHTML=`
-<tr>
-<th>Name</th>
-<th>Mobile</th>
-<th>Assigned</th>
-<th>Sold</th>
-<th>Remaining</th>
-<th>Earning</th>
-</tr>`;
+table.innerHTML="<tr><th>Name</th><th>Mobile</th><th>Assigned</th><th>Sold</th><th>Remaining</th><th>Earning</th></tr>";
 
 data.forEach(r=>{
-table.innerHTML+=`
-<tr>
+table.innerHTML+=`<tr>
 <td>${r.name}</td>
 <td>${r.mobile}</td>
 <td>${r.assigned}</td>
