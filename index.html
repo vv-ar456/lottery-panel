@@ -3,90 +3,42 @@
 <head>
 <title>Retailer Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-body{
-font-family:Arial;
-background:#f4f6f9;
-text-align:center;
-}
-.card{
-background:white;
-padding:20px;
-margin:40px auto;
-width:320px;
-border-radius:12px;
-box-shadow:0 6px 18px rgba(0,0,0,0.1);
-}
-input{
-width:90%;
-padding:10px;
-margin:8px 0;
-border-radius:6px;
-border:1px solid #ccc;
-}
-button{
-padding:10px 20px;
-background:#007bff;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
-}
-.dashboard{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
-gap:20px;
-margin-top:30px;
-}
-.box{
-background:white;
-padding:20px;
-width:150px;
-border-radius:12px;
-box-shadow:0 5px 12px rgba(0,0,0,0.1);
-}
-h3{margin:0;font-size:22px;}
+body{font-family:Arial;background:#f4f6f9;text-align:center;}
+.card{background:white;padding:20px;margin:20px auto;width:320px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.1);}
+input{width:90%;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #ccc;}
+button{padding:10px 20px;background:#007bff;color:white;border:none;border-radius:6px;cursor:pointer;}
+.box{background:white;padding:15px;margin:10px;border-radius:10px;display:inline-block;width:140px;}
 </style>
 </head>
 <body>
 
 <div class="card" id="loginBox">
 <h2>Retailer Login</h2>
-<input id="mobile" placeholder="Mobile"><br>
-<input id="password" placeholder="Password"><br>
+<input id="mobile" placeholder="Mobile">
+<input id="password" placeholder="Password">
 <button onclick="login()">Login</button>
-<p id="msg"></p>
 </div>
 
 <div id="dashboard" style="display:none;">
-<h2>Retailer Dashboard</h2>
+<h2>Dashboard</h2>
 
-<div class="dashboard">
-<div class="box">
-<h3 id="assigned">0</h3>
-<p>Assigned</p>
+<div class="box">Assigned<br><span id="assigned"></span></div>
+<div class="box">Sold<br><span id="sold"></span></div>
+<div class="box">Remaining<br><span id="remaining"></span></div>
+<div class="box">Earning ₹<br><span id="earning"></span></div>
+
+<div class="card">
+<h3>Sell Ticket</h3>
+<input id="sellTicket" placeholder="Enter Ticket No">
+<button onclick="sellTicket()">Sell (Manual)</button>
+<button onclick="startScanner()">Scan</button>
+<div id="reader"></div>
+<p id="msg"></p>
 </div>
 
-<div class="box">
-<h3 id="sold">0</h3>
-<p>Sold</p>
-</div>
-
-<div class="box">
-<h3 id="remaining">0</h3>
-<p>Remaining</p>
-</div>
-
-<div class="box">
-<h3 id="earning">0</h3>
-<p>Earning ₹</p>
-</div>
-</div>
-
-<br>
-<button onclick="logout()">Logout</button>
 </div>
 
 <script>
@@ -96,35 +48,71 @@ const client = window.supabase.createClient(
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnY2VnZXZ2Y2NwanZjamJ1eWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTkwMjgsImV4cCI6MjA4Nzg5NTAyOH0.-k2CKY0GB389tH0EGSpIncsG2R6A8H3Zaxehw265-Ic"
 );
 
-async function login(){
+let currentMobile="";
 
+async function login(){
 let mobile=document.getElementById("mobile").value;
 let password=document.getElementById("password").value;
 
-const {data,error}=await client
-.from("retailers")
-.select("*")
-.eq("mobile",mobile)
-.eq("password",password)
-.single();
+let {data}=await client.from("retailers").select("*")
+.eq("mobile",mobile).eq("password",password).single();
 
-if(error || !data){
-document.getElementById("msg").innerText="Invalid Login";
-return;
-}
+if(!data){alert("Invalid");return;}
 
+currentMobile=mobile;
 document.getElementById("loginBox").style.display="none";
 document.getElementById("dashboard").style.display="block";
+
+updateDashboard();
+}
+
+async function updateDashboard(){
+let {data}=await client.from("retailers").select("*")
+.eq("mobile",currentMobile).single();
 
 document.getElementById("assigned").innerText=data.assigned;
 document.getElementById("sold").innerText=data.sold;
 document.getElementById("remaining").innerText=data.remaining;
 document.getElementById("earning").innerText=data.earning;
-
 }
 
-function logout(){
-location.reload();
+async function sellTicketManual(ticket){
+
+let {data}=await client.from("tickets").select("*")
+.eq("ticket_no",ticket).eq("retailer_mobile",currentMobile).single();
+
+if(!data){alert("Invalid Ticket");return;}
+
+await client.from("tickets").update({status:"sold"})
+.eq("ticket_no",ticket);
+
+let {data:r}=await client.from("retailers").select("*")
+.eq("mobile",currentMobile).single();
+
+await client.from("retailers").update({
+sold:r.sold+1,
+remaining:r.remaining-1,
+earning:r.earning+10
+}).eq("mobile",currentMobile);
+
+updateDashboard();
+}
+
+function sellTicket(){
+let ticket=document.getElementById("sellTicket").value;
+sellTicketManual(ticket);
+}
+
+function startScanner(){
+const html5QrCode = new Html5Qrcode("reader");
+html5QrCode.start(
+{ facingMode: "environment" },
+{ fps: 10, qrbox: 250 },
+ticket => {
+sellTicketManual(ticket);
+html5QrCode.stop();
+}
+);
 }
 
 </script>
