@@ -1,29 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Admin Panel</title>
+<title>Admin Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+font-family:Arial;
+background:#f4f6f9;
+text-align:center;
+}
+.card{
+background:white;
+padding:20px;
+margin:40px auto;
+width:350px;
+border-radius:12px;
+box-shadow:0 6px 18px rgba(0,0,0,0.1);
+}
+input{
+width:90%;
+padding:10px;
+margin:8px 0;
+border-radius:6px;
+border:1px solid #ccc;
+}
+button{
+padding:10px 20px;
+background:#28a745;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+table{
+width:90%;
+margin:20px auto;
+border-collapse:collapse;
+background:white;
+box-shadow:0 5px 12px rgba(0,0,0,0.1);
+}
+th,td{
+padding:10px;
+border:1px solid #ddd;
+}
+th{
+background:#007bff;
+color:white;
+}
+</style>
 </head>
 <body>
 
+<div class="card">
 <h2>Add Retailer</h2>
-
-<input id="name" placeholder="Name"><br><br>
-<input id="mobile" placeholder="Mobile"><br><br>
-<input id="password" placeholder="Password"><br><br>
-
+<input id="name" placeholder="Name"><br>
+<input id="mobile" placeholder="Mobile"><br>
+<input id="password" placeholder="Password"><br>
 <button onclick="addRetailer()">Add Retailer</button>
-
-<h3>Retailers List</h3>
-<table border="1" id="table"></table>
-
 <p id="msg"></p>
+</div>
+
+<h2>Retailers List</h2>
+
+<table id="table">
+<tr>
+<th>Name</th>
+<th>Mobile</th>
+<th>Assigned</th>
+<th>Sold</th>
+<th>Remaining</th>
+<th>Earning</th>
+</tr>
+</table>
 
 <script>
 
 const client = window.supabase.createClient(
-"PASTE_YOUR_PROJECT_URL",
-"PASTE_YOUR_ANON_KEY"
+"https://xgcegevvccpjvcjbuyfa.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnY2VnZXZ2Y2NwanZjamJ1eWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTkwMjgsImV4cCI6MjA4Nzg5NTAyOH0.-k2CKY0GB389tH0EGSpIncsG2R6A8H3Zaxehw265-Ic"
 );
 
 async function addRetailer(){
@@ -37,9 +92,9 @@ const {error}=await client
 .insert([{name,mobile,password,assigned:0,sold:0,remaining:0,earning:0}]);
 
 if(error){
-document.getElementById("msg").innerText="Error";
+document.getElementById("msg").innerText="Error adding retailer";
 }else{
-document.getElementById("msg").innerText="Retailer Added";
+document.getElementById("msg").innerText="Retailer Added Successfully";
 loadRetailers();
 }
 }
@@ -50,10 +105,19 @@ const {data}=await client.from("retailers").select("*");
 
 let table=document.getElementById("table");
 
-table.innerHTML="<tr><th>Name</th><th>Mobile</th><th>Assigned</th><th>Sold</th><th>Remaining</th><th>Earning</th></tr>";
+table.innerHTML=`
+<tr>
+<th>Name</th>
+<th>Mobile</th>
+<th>Assigned</th>
+<th>Sold</th>
+<th>Remaining</th>
+<th>Earning</th>
+</tr>`;
 
 data.forEach(r=>{
-table.innerHTML+=`<tr>
+table.innerHTML+=`
+<tr>
 <td>${r.name}</td>
 <td>${r.mobile}</td>
 <td>${r.assigned}</td>
