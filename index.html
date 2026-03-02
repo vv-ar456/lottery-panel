@@ -1,124 +1,344 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Retailer Panel</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verified Victory | Official Portal</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* PREMIUM APP-LIKE STYLING */
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
+        
+        body { 
+            background: linear-gradient(135deg, #050b14, #132b4a, #050b14); 
+            color: white; 
+            min-height: 100vh; padding: 20px; padding-bottom: 50px;
+        }
+
+        .app-container {
+            max-width: 450px; margin: 0 auto;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+
+        /* 1. Logo Section */
+        .header-logo { text-align: center; padding: 10px 0; }
+        .header-logo img { width: 100%; max-width: 280px; filter: drop-shadow(0px 5px 15px rgba(255, 215, 0, 0.4)); }
+
+        /* Glassmorphism Cards for Steps */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px; padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .step-title {
+            font-size: 1.1rem; color: #ffd700; margin-bottom: 15px; 
+            border-bottom: 1px solid rgba(255,215,0,0.3); padding-bottom: 8px; font-weight: 600;
+        }
+
+        /* Inputs & Buttons */
+        .input-style {
+            width: 100%; padding: 14px 15px; margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); 
+            border-radius: 12px; color: white; font-size: 1rem; outline: none; transition: 0.3s;
+        }
+        .input-style::placeholder { color: rgba(255,255,255,0.4); }
+        .input-style:focus { border-color: #ffd700; background: rgba(255, 255, 255, 0.12); }
+
+        .ticket-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .ticket-row input { flex: 1; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; margin-bottom: 0;}
+        
+        .scan-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 18px; font-size: 1.2rem; cursor: pointer; transition: 0.3s; }
+        .scan-btn:hover { background: rgba(255,215,0,0.2); border-color: #ffd700; }
+        
+        .add-btn { background: transparent; border: 1px dashed #ffd700; color: #ffd700; width: 100%; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .add-btn:hover { background: rgba(255,215,0,0.1); }
+
+        .amount-display { text-align: center; font-size: 2.8rem; font-weight: 800; color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+
+        /* Camera UI */
+        .camera-box { width: 100%; border-radius: 15px; overflow: hidden; border: 2px dashed rgba(255,215,0,0.4); position: relative; background: #000; aspect-ratio: 3/4; display: none; }
+        #videoElement { width: 100%; height: 100%; object-fit: cover; }
+        #photoPreview { width: 100%; height: 100%; object-fit: cover; display: none; border-radius: 15px; border: 2px solid #28a745; }
+        
+        .cam-btn { width: 100%; padding: 12px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
+        .start-cam { background: rgba(255,255,255,0.15); color: white; }
+        .capture-cam { background: #28a745; color: white; display: none; }
+        .retake-cam { background: #ff4757; color: white; display: none; }
+
+        /* Submit Button */
+        .submit-btn {
+            width: 100%; padding: 18px; background: linear-gradient(90deg, #d4af37, #ffdf00); 
+            color: #0b1e36; border: none; border-radius: 15px; font-size: 1.2rem; font-weight: 800; 
+            cursor: pointer; box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4); text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        /* Modals & Overlays */
+        #scanner-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        #reader { width: 100%; max-width: 400px; border-radius: 15px; overflow: hidden; border: 2px solid #ffd700; }
+        
+        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 11, 20, 0.95); z-index: 3000; justify-content: center; align-items: center; flex-direction: column; }
+        .loader { width: 60px; height: 60px; border: 5px solid rgba(255, 215, 0, 0.2); border-top-color: #ffd700; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
 
-<h2>Retailer Login</h2>
-<div id="loginBox">
-<input id="mobile" placeholder="Mobile"><br>
-<input id="password" placeholder="Password"><br>
-<button onclick="login()">Login</button>
-</div>
+    <div id="scanner-modal">
+        <h3 style="color: #ffd700; margin-bottom: 15px;">📷 Align Barcode</h3>
+        <div id="reader"></div>
+        <button class="cam-btn retake-cam" style="display:block; max-width: 200px; margin-top: 20px;" onclick="closeScanner()">Cancel</button>
+    </div>
 
-<div id="dashboard" style="display:none;">
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <div id="loading-text" style="color: #ffd700; font-weight: 600; font-size: 1.1rem; letter-spacing: 1px;">Processing...</div>
+    </div>
 
-<h3>Dashboard</h3>
-Assigned: <span id="assigned"></span><br>
-Sold: <span id="sold"></span><br>
-Remaining: <span id="remaining"></span><br>
-Earning: ₹<span id="earning"></span><br><br>
+    <div class="app-container">
+        
+        <div class="header-logo">
+            <img src="1000102234-removebg-preview.png" alt="Verified Victory">
+        </div>
 
-<h3>My Assigned Tickets</h3>
-<div id="myTickets"></div>
+        <div class="glass-card">
+            <div class="step-title">01. Add Tickets</div>
+            <div id="ticket-list">
+                <div class="ticket-row">
+                    <input type="text" class="input-style ticket-input" placeholder="Enter or Scan Ticket" oninput="updateAmount()">
+                    <button class="scan-btn" onclick="openScanner(this)">📷</button>
+                </div>
+            </div>
+            <button class="add-btn" onclick="addTicketBox()">+ Add More (Max 10)</button>
+        </div>
 
-<h3>Sell Tickets (Max 10)</h3>
-<input id="customerName" placeholder="Customer Name"><br>
-<input id="customerMobile" placeholder="Customer Mobile"><br>
-<textarea id="bulkSell" placeholder="Enter ticket numbers comma separated"></textarea><br>
-<button onclick="bulkSell()">Sell Tickets</button>
+        <div class="glass-card">
+            <div class="step-title">02. Total Payable Amount</div>
+            <div class="amount-display" id="totalAmount">₹0</div>
+        </div>
 
-</div>
+        <div class="glass-card">
+            <div class="step-title">03. Customer Details</div>
+            <input type="text" id="custName" class="input-style" placeholder="Customer Full Name">
+            <input type="tel" id="custPhone" class="input-style" placeholder="10-Digit Mobile Number" maxlength="10">
+        </div>
 
-<script>
+        <div class="glass-card">
+            <div class="step-title">04. Customer Photo</div>
+            <p style="font-size: 0.85rem; color: #a8b2c1; margin-bottom: 10px;">Live camera capture is mandatory.</p>
+            
+            <button class="cam-btn start-cam" id="startCamBtn" onclick="startCamera()">📸 Open Camera</button>
+            
+            <div class="camera-box" id="camera-container">
+                <video id="videoElement" autoplay playsinline></video>
+            </div>
+            
+            <img id="photoPreview" alt="Captured Photo">
+            <canvas id="photoCanvas" style="display: none;"></canvas>
 
-const client = window.supabase.createClient(
-"https://xgcegevvccpjvcjbuyfa.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnY2VnZXZ2Y2NwanZjamJ1eWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTkwMjgsImV4cCI6MjA4Nzg5NTAyOH0.-k2CKY0GB389tH0EGSpIncsG2R6A8H3Zaxehw265-Ic"
-);
+            <button class="cam-btn capture-cam" id="captureBtn" onclick="capturePhoto()">O Capture Image</button>
+            <button class="cam-btn retake-cam" id="retakeBtn" onclick="retakePhoto()">↺ Retake Photo</button>
+        </div>
 
-let currentMobile="";
+        <button class="submit-btn" onclick="submitData()">Save Purchase & Data</button>
 
-async function login(){
+    </div>
 
-let mobile=document.getElementById("mobile").value;
-let password=document.getElementById("password").value;
+    <script>
+        // ==========================================
+        // 🚨 AAPKI SUPABASE DETAILS 🚨
+        // ==========================================
+        const SUPABASE_URL = 'https://mpsshowyrgbehjoffieh.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc3Nob3d5cmdiZWhqb2ZmaWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDA3MTUsImV4cCI6MjA4ODAxNjcxNX0.4nHVtR5edrXUjsIi_2-L8OD66ATZ9ITWT3l--nVlX6I'; 
+        
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const TICKET_PRICE = 20;
 
-let {data}=await client.from("retailers").select("*")
-.eq("mobile",mobile).eq("password",password).single();
+        // --- Step 2 & 3: Ticket Logic & Amount ---
+        function updateAmount() {
+            let count = 0;
+            document.querySelectorAll('.ticket-input').forEach(input => {
+                if(input.value.trim() !== "") count++;
+            });
+            document.getElementById('totalAmount').innerText = `₹${count * TICKET_PRICE}`;
+        }
 
-if(!data){alert("Invalid");return;}
+        function addTicketBox() {
+            if (document.querySelectorAll('.ticket-input').length >= 10) return alert("⚠️ Maximum 10 tickets allowed per customer.");
+            
+            const wrapper = document.getElementById('ticket-list');
+            const newDiv = document.createElement('div');
+            newDiv.className = "ticket-row";
+            newDiv.innerHTML = `
+                <input type="text" class="input-style ticket-input" placeholder="Enter or Scan Ticket" oninput="updateAmount()">
+                <button class="scan-btn" onclick="openScanner(this)">📷</button>
+            `;
+            wrapper.appendChild(newDiv);
+        }
 
-currentMobile=mobile;
-document.getElementById("loginBox").style.display="none";
-document.getElementById("dashboard").style.display="block";
+        // --- Barcode Scanner ---
+        let currentScanInput = null;
+        let html5QrCode = null;
 
-updateDashboard();
-loadMyTickets();
-}
+        function openScanner(btn) {
+            currentScanInput = btn.previousElementSibling;
+            document.getElementById('scanner-modal').style.display = 'flex';
+            
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } }, 
+                (text) => {
+                    currentScanInput.value = text.trim().toUpperCase();
+                    updateAmount();
+                    closeScanner();
+                    new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play().catch(()=>{});
+                },
+                (err) => {}
+            ).catch(() => { 
+                alert("⚠️ Camera Access Denied! Please allow camera permission in browser."); 
+                closeScanner(); 
+            });
+        }
 
-async function updateDashboard(){
-let {data}=await client.from("retailers")
-.select("*").eq("mobile",currentMobile).single();
+        function closeScanner() {
+            document.getElementById('scanner-modal').style.display = 'none';
+            if(html5QrCode) html5QrCode.stop().then(() => html5QrCode.clear()).catch(()=>{});
+        }
 
-document.getElementById("assigned").innerText=data.assigned;
-document.getElementById("sold").innerText=data.sold;
-document.getElementById("remaining").innerText=data.remaining;
-document.getElementById("earning").innerText=data.earning;
-}
+        // --- Step 5: Live Camera Capture ---
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('photoCanvas');
+        const preview = document.getElementById('photoPreview');
+        let photoBlob = null;
+        let stream = null;
 
-async function loadMyTickets(){
-let {data}=await client.from("tickets")
-.select("*").eq("retailer_mobile",currentMobile)
-.eq("status","assigned");
+        async function startCamera() {
+            document.getElementById('startCamBtn').style.display = 'none';
+            document.getElementById('camera-container').style.display = 'block';
+            document.getElementById('captureBtn').style.display = 'block';
+            
+            try {
+                // Front camera (user) preferred for customer photos
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("⚠️ Camera failed to start. Ensure permissions are allowed.");
+                document.getElementById('startCamBtn').style.display = 'block';
+                document.getElementById('camera-container').style.display = 'none';
+                document.getElementById('captureBtn').style.display = 'none';
+            }
+        }
 
-let list="";
-data.forEach(t=>{list+=t.ticket_no+" , ";});
-document.getElementById("myTickets").innerText=list;
-}
+        function capturePhoto() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert to Blob for upload
+            canvas.toBlob(blob => { photoBlob = blob; }, 'image/jpeg', 0.8);
+            
+            preview.src = canvas.toDataURL('image/jpeg');
+            preview.style.display = 'block';
+            
+            document.getElementById('camera-container').style.display = 'none';
+            document.getElementById('captureBtn').style.display = 'none';
+            document.getElementById('retakeBtn').style.display = 'block';
+            
+            if(stream) stream.getTracks().forEach(track => track.stop()); // Stop camera
+        }
 
-async function bulkSell(){
+        function retakePhoto() {
+            photoBlob = null;
+            preview.style.display = 'none';
+            document.getElementById('retakeBtn').style.display = 'none';
+            startCamera();
+        }
 
-let tickets=document.getElementById("bulkSell").value.split(",");
-if(tickets.length>10){alert("Max 10 allowed");return;}
+        // --- Step 6: Submit Data to Supabase ---
+        function showLoading(text) {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
 
-let cname=document.getElementById("customerName").value;
-let cmobile=document.getElementById("customerMobile").value;
+        async function submitData() {
+            // 1. Gather & Validate Tickets
+            let tickets = [];
+            document.querySelectorAll('.ticket-input').forEach(input => {
+                let val = input.value.trim().toUpperCase();
+                if(val !== "") tickets.push(val);
+            });
 
-for(let t of tickets){
+            if(tickets.length === 0) return alert("⚠️ Please enter at least 1 ticket number.");
+            
+            // 2. Validate Customer Details
+            const custName = document.getElementById('custName').value.trim();
+            const custPhone = document.getElementById('custPhone').value.trim();
+            const amount = document.getElementById('totalAmount').innerText;
 
-t=t.trim();
+            if(custName === "") return alert("⚠️ Please enter Customer Name.");
+            if(custPhone.length !== 10) return alert("⚠️ Please enter a valid 10-digit Mobile Number.");
+            
+            // 3. Validate Photo
+            if(!photoBlob) return alert("⚠️ Please capture the Customer's Photo.");
 
-let {data}=await client.from("tickets")
-.select("*").eq("ticket_no",t)
-.eq("retailer_mobile",currentMobile).single();
+            // START PROCESSING
+            showLoading("Uploading Secure Photo...");
 
-if(!data || data.status!="assigned") continue;
+            try {
+                // A. Upload Photo to Storage Bucket ('customer_photos')
+                const fileName = `photo_${Date.now()}.jpg`;
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('customer_photos')
+                    .upload(fileName, photoBlob, { contentType: 'image/jpeg' });
 
-await client.from("tickets").update({
-status:"sold",
-customer_name:cname,
-customer_mobile:cmobile
-}).eq("ticket_no",t);
+                if (uploadError) {
+                    console.error("Upload Error:", uploadError);
+                    throw new Error("Photo Upload Failed! Check if 'customer_photos' bucket exists and RLS is disabled via SQL.");
+                }
 
-let {data:r}=await client.from("retailers")
-.select("*").eq("mobile",currentMobile).single();
+                showLoading("Saving Purchase Data...");
 
-await client.from("retailers").update({
-sold:r.sold+1,
-remaining:r.remaining-1,
-earning:r.earning+data.price
-}).eq("mobile",currentMobile);
-}
+                // B. Get Public URL of the uploaded photo
+                const { data: publicUrlData } = supabase.storage
+                    .from('customer_photos')
+                    .getPublicUrl(fileName);
+                const finalPhotoUrl = publicUrlData.publicUrl;
 
-updateDashboard();
-loadMyTickets();
-alert("Tickets Sold");
-}
+                // C. Insert Data into Table ('purchases')
+                const { error: dbError } = await supabase
+                    .from('purchases')
+                    .insert([{ 
+                        customer_name: custName, 
+                        customer_phone: custPhone, 
+                        tickets: tickets.join(', '), 
+                        total_amount: amount, 
+                        photo_url: finalPhotoUrl
+                    }]);
 
-</script>
+                if (dbError) {
+                    console.error("DB Error:", dbError);
+                    throw new Error("Database Save Failed! Check if 'purchases' table exists.");
+                }
+
+                // D. Success
+                document.getElementById('loading-overlay').style.display = 'none';
+                alert("✅ SUCCESS! Tickets sold and data secured in Supabase.");
+                
+                // Refresh page for next customer
+                window.location.reload();
+
+            } catch (err) {
+                document.getElementById('loading-overlay').style.display = 'none';
+                alert(`❌ ERROR: ${err.message}`);
+            }
+        }
+    </script>
 </body>
 </html>
