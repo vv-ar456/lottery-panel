@@ -54,7 +54,7 @@
         .ticket-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
         .ticket-row input { flex: 1; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; margin-bottom: 0;}
         
-        .scan-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 18px; font-size: 1.2rem; cursor: pointer; transition: 0.3s; }
+        .scan-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 18px; font-size: 1.2rem; cursor: pointer; transition: 0.3s; height: 50px; display: flex; align-items: center; justify-content: center;}
         .scan-btn:hover { background: rgba(255,215,0,0.2); border-color: #ffd700; }
         
         .add-btn { background: transparent; border: 1px dashed #ffd700; color: #ffd700; width: 100%; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; }
@@ -81,7 +81,7 @@
 
         /* Modals & Overlays */
         #scanner-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        #reader { width: 100%; max-width: 400px; border-radius: 15px; overflow: hidden; border: 2px solid #ffd700; }
+        #reader { width: 100%; max-width: 400px; border-radius: 15px; overflow: hidden; border: 2px solid #ffd700; background: white;}
         
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 11, 20, 0.95); z-index: 3000; justify-content: center; align-items: center; flex-direction: column; }
         .loader { width: 60px; height: 60px; border: 5px solid rgba(255, 215, 0, 0.2); border-top-color: #ffd700; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
@@ -91,9 +91,9 @@
 <body>
 
     <div id="scanner-modal">
-        <h3 style="color: #ffd700; margin-bottom: 15px;">📷 Align Barcode</h3>
+        <h3 style="color: #ffd700; margin-bottom: 15px;">📷 Scan Barcode</h3>
         <div id="reader"></div>
-        <button class="cam-btn retake-cam" style="display:block; max-width: 200px; margin-top: 20px;" onclick="closeScanner()">Cancel</button>
+        <button type="button" class="cam-btn retake-cam" style="display:block; max-width: 200px; margin-top: 20px;" onclick="closeScanner()">Cancel</button>
     </div>
 
     <div id="loading-overlay">
@@ -104,18 +104,18 @@
     <div class="app-container">
         
         <div class="header-logo">
-            <img src="1000102234-removebg-preview.png" alt="Verified Victory">
+            <img src="1000102234-removebg-preview.png" alt="Verified Victory" onerror="this.style.display='none'">
         </div>
 
         <div class="glass-card">
             <div class="step-title">01. Add Tickets</div>
             <div id="ticket-list">
                 <div class="ticket-row">
-                    <input type="text" class="input-style ticket-input" placeholder="Enter or Scan Ticket" oninput="updateAmount()">
-                    <button class="scan-btn" onclick="openScanner(this)">📷</button>
+                    <input type="text" class="input-style ticket-input" placeholder="Enter Ticket (e.g. AA001)" oninput="updateAmount()">
+                    <button type="button" class="scan-btn" onclick="openScanner(this)">📷</button>
                 </div>
             </div>
-            <button class="add-btn" onclick="addTicketBox()">+ Add More (Max 10)</button>
+            <button type="button" class="add-btn" onclick="addTicketBox()">+ Add More (Max 10)</button>
         </div>
 
         <div class="glass-card">
@@ -133,36 +133,37 @@
             <div class="step-title">04. Customer Photo</div>
             <p style="font-size: 0.85rem; color: #a8b2c1; margin-bottom: 10px;">Live camera capture is mandatory.</p>
             
-            <button class="cam-btn start-cam" id="startCamBtn" onclick="startCamera()">📸 Open Camera</button>
+            <button type="button" class="cam-btn start-cam" id="startCamBtn" onclick="startCamera()">📸 Open Camera</button>
             
             <div class="camera-box" id="camera-container">
-                <video id="videoElement" autoplay playsinline></video>
+                <video id="videoElement" autoplay playsinline muted></video>
             </div>
             
             <img id="photoPreview" alt="Captured Photo">
             <canvas id="photoCanvas" style="display: none;"></canvas>
 
-            <button class="cam-btn capture-cam" id="captureBtn" onclick="capturePhoto()">O Capture Image</button>
-            <button class="cam-btn retake-cam" id="retakeBtn" onclick="retakePhoto()">↺ Retake Photo</button>
+            <button type="button" class="cam-btn capture-cam" id="captureBtn" onclick="capturePhoto()">O Capture Image</button>
+            <button type="button" class="cam-btn retake-cam" id="retakeBtn" onclick="retakePhoto()">↺ Retake Photo</button>
         </div>
 
-        <button class="submit-btn" onclick="submitData()">Save Purchase & Data</button>
+        <button type="button" class="submit-btn" onclick="submitData()">Save Purchase & Data</button>
 
     </div>
 
     <script>
         // ==========================================
-        // 🚨 AAPKI SUPABASE DETAILS 🚨
+        // 🚨 SUPABASE CONFIGURATION 🚨
         // ==========================================
         const SUPABASE_URL = 'https://mpsshowyrgbehjoffieh.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc3Nob3d5cmdiZWhqb2ZmaWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDA3MTUsImV4cCI6MjA4ODAxNjcxNX0.4nHVtR5edrXUjsIi_2-L8OD66ATZ9ITWT3l--nVlX6I'; 
         
-        // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
         const TICKET_PRICE = 20;
 
-        // --- Step 2 & 3: Ticket Logic & Amount ---
+        // Automatically Generate AA001 to AA100 array!
+        const validDatabase = Array.from({length: 100}, (_, i) => 'AA' + String(i + 1).padStart(3, '0'));
+
+        // --- TICKETS & AMOUNT LOGIC ---
         function updateAmount() {
             let count = 0;
             document.querySelectorAll('.ticket-input').forEach(input => {
@@ -172,47 +173,55 @@
         }
 
         function addTicketBox() {
-            if (document.querySelectorAll('.ticket-input').length >= 10) return alert("⚠️ Maximum 10 tickets allowed per customer.");
+            const inputs = document.querySelectorAll('.ticket-input');
+            if (inputs.length >= 10) return alert("⚠️ Maximum 10 tickets allowed per customer.");
             
             const wrapper = document.getElementById('ticket-list');
             const newDiv = document.createElement('div');
             newDiv.className = "ticket-row";
             newDiv.innerHTML = `
                 <input type="text" class="input-style ticket-input" placeholder="Enter or Scan Ticket" oninput="updateAmount()">
-                <button class="scan-btn" onclick="openScanner(this)">📷</button>
+                <button type="button" class="scan-btn" onclick="openScanner(this)">📷</button>
             `;
             wrapper.appendChild(newDiv);
         }
 
-        // --- Barcode Scanner ---
+        // --- BARCODE SCANNER LOGIC ---
         let currentScanInput = null;
         let html5QrCode = null;
 
         function openScanner(btn) {
-            currentScanInput = btn.previousElementSibling;
+            currentScanInput = btn.previousElementSibling; // Target the input field next to the button
             document.getElementById('scanner-modal').style.display = 'flex';
             
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } }, 
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 150 } }, 
                 (text) => {
                     currentScanInput.value = text.trim().toUpperCase();
                     updateAmount();
                     closeScanner();
-                    new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play().catch(()=>{});
+                    try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
                 },
-                (err) => {}
-            ).catch(() => { 
-                alert("⚠️ Camera Access Denied! Please allow camera permission in browser."); 
+                (err) => { /* Ignore background scanning errors */ }
+            ).catch((err) => { 
+                alert("⚠️ Camera Access Denied or Not Supported by your Browser."); 
                 closeScanner(); 
             });
         }
 
         function closeScanner() {
             document.getElementById('scanner-modal').style.display = 'none';
-            if(html5QrCode) html5QrCode.stop().then(() => html5QrCode.clear()).catch(()=>{});
+            if(html5QrCode) {
+                html5QrCode.stop().then(() => html5QrCode.clear()).catch(()=>{});
+            }
         }
 
-        // --- Step 5: Live Camera Capture ---
+        // --- LIVE CAMERA LOGIC (FIXED FOR MOBILE) ---
         const video = document.getElementById('videoElement');
         const canvas = document.getElementById('photoCanvas');
         const preview = document.getElementById('photoPreview');
@@ -220,30 +229,33 @@
         let stream = null;
 
         async function startCamera() {
-            document.getElementById('startCamBtn').style.display = 'none';
-            document.getElementById('camera-container').style.display = 'block';
-            document.getElementById('captureBtn').style.display = 'block';
-            
+            const startBtn = document.getElementById('startCamBtn');
+            const camContainer = document.getElementById('camera-container');
+            const captureBtn = document.getElementById('captureBtn');
+
             try {
                 // Front camera (user) preferred for customer photos
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
                 video.srcObject = stream;
+                
+                startBtn.style.display = 'none';
+                camContainer.style.display = 'block';
+                captureBtn.style.display = 'block';
             } catch (err) {
-                alert("⚠️ Camera failed to start. Ensure permissions are allowed.");
-                document.getElementById('startCamBtn').style.display = 'block';
-                document.getElementById('camera-container').style.display = 'none';
-                document.getElementById('captureBtn').style.display = 'none';
+                alert("⚠️ Camera failed to start. Ensure camera permissions are allowed in your browser settings.");
             }
         }
 
         function capturePhoto() {
+            // Draw video frame to canvas
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Convert to Blob for upload
+            // Convert canvas to Blob for uploading
             canvas.toBlob(blob => { photoBlob = blob; }, 'image/jpeg', 0.8);
             
+            // Show preview
             preview.src = canvas.toDataURL('image/jpeg');
             preview.style.display = 'block';
             
@@ -251,7 +263,8 @@
             document.getElementById('captureBtn').style.display = 'none';
             document.getElementById('retakeBtn').style.display = 'block';
             
-            if(stream) stream.getTracks().forEach(track => track.stop()); // Stop camera
+            // Stop camera stream to save battery
+            if(stream) stream.getTracks().forEach(track => track.stop()); 
         }
 
         function retakePhoto() {
@@ -261,7 +274,7 @@
             startCamera();
         }
 
-        // --- Step 6: Submit Data to Supabase ---
+        // --- SUBMIT TO SUPABASE ---
         function showLoading(text) {
             document.getElementById('loading-text').innerText = text;
             document.getElementById('loading-overlay').style.display = 'flex';
@@ -270,12 +283,18 @@
         async function submitData() {
             // 1. Gather & Validate Tickets
             let tickets = [];
+            let invalidTickets = [];
+            
             document.querySelectorAll('.ticket-input').forEach(input => {
                 let val = input.value.trim().toUpperCase();
-                if(val !== "") tickets.push(val);
+                if(val !== "") {
+                    if (validDatabase.includes(val)) tickets.push(val);
+                    else invalidTickets.push(val);
+                }
             });
 
-            if(tickets.length === 0) return alert("⚠️ Please enter at least 1 ticket number.");
+            if (tickets.length === 0 && invalidTickets.length === 0) return alert("⚠️ Please enter at least 1 ticket number.");
+            if (invalidTickets.length > 0) return alert(`❌ Invalid/Fake Tickets entered: ${invalidTickets.join(', ')}`);
             
             // 2. Validate Customer Details
             const custName = document.getElementById('custName').value.trim();
@@ -288,7 +307,7 @@
             // 3. Validate Photo
             if(!photoBlob) return alert("⚠️ Please capture the Customer's Photo.");
 
-            // START PROCESSING
+            // START UPLOAD
             showLoading("Uploading Secure Photo...");
 
             try {
@@ -298,10 +317,7 @@
                     .from('customer_photos')
                     .upload(fileName, photoBlob, { contentType: 'image/jpeg' });
 
-                if (uploadError) {
-                    console.error("Upload Error:", uploadError);
-                    throw new Error("Photo Upload Failed! Check if 'customer_photos' bucket exists and RLS is disabled via SQL.");
-                }
+                if (uploadError) throw new Error("Photo Upload Failed! Did you run the SQL Query for the storage bucket?");
 
                 showLoading("Saving Purchase Data...");
 
@@ -322,14 +338,11 @@
                         photo_url: finalPhotoUrl
                     }]);
 
-                if (dbError) {
-                    console.error("DB Error:", dbError);
-                    throw new Error("Database Save Failed! Check if 'purchases' table exists.");
-                }
+                if (dbError) throw new Error("Database Save Failed! Did you create the table properly?");
 
                 // D. Success
                 document.getElementById('loading-overlay').style.display = 'none';
-                alert("✅ SUCCESS! Tickets sold and data secured in Supabase.");
+                alert("🎉 SUCCESS! Tickets sold and data secured in Supabase.");
                 
                 // Refresh page for next customer
                 window.location.reload();
@@ -337,6 +350,7 @@
             } catch (err) {
                 document.getElementById('loading-overlay').style.display = 'none';
                 alert(`❌ ERROR: ${err.message}`);
+                console.error(err);
             }
         }
     </script>
