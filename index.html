@@ -3,125 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Verified Victory | Pro Scanner</title>
+    <title>Verified Victory | Scanner</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
-        /* MOBILE-FIRST BULLETPROOF DESIGN */
+        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+        
         body { 
-            background: #050b14; color: white; font-family: sans-serif; 
-            margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center;
+            background: #050b14; color: white; 
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px;
         }
 
-        .logo { width: 100%; max-width: 240px; margin: 20px 0; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3)); }
+        .logo { width: 100%; max-width: 250px; margin-bottom: 20px; }
 
-        /* Scanner Box - Stylish & Responsive */
-        #reader { 
-            width: 100%; max-width: 380px; border-radius: 15px; overflow: hidden; 
-            border: 2px solid #ffd700; background: #000; margin-bottom: 20px;
+        /* Scanner Window - Mobile Responsive */
+        #interactive-container {
+            width: 100%;
+            max-width: 380px;
+            aspect-ratio: 1/1;
+            background: #000;
+            border: 2px solid #ffd700;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
         }
 
-        /* Library UI Elements Styling (To make it look modern) */
-        #reader__dashboard_section_csr button {
-            background: #ffd700 !important; color: #000 !important; 
-            border: none !important; padding: 12px 20px !important; 
-            border-radius: 8px !important; font-weight: bold !important; cursor: pointer !important;
-            margin: 10px 0 !important; width: 100% !important;
-        }
-        #reader__scan_region { background: white !important; }
+        #reader { width: 100%; height: 100%; }
 
-        .input-box {
-            width: 100%; max-width: 380px; padding: 15px; font-size: 22px; 
-            background: rgba(255,255,255,0.1); border: 2px solid #ffd700; 
-            border-radius: 12px; color: #ffd700; font-weight: bold; 
-            text-align: center; margin-bottom: 15px; outline: none; text-transform: uppercase;
+        .controls {
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
 
-        .btn-submit {
-            width: 100%; max-width: 380px; padding: 16px; background: #ffd700; 
-            color: #000; border: none; border-radius: 12px; font-size: 18px; 
-            font-weight: 800; cursor: pointer; text-transform: uppercase;
-            box-shadow: 0 5px 15px rgba(255,215,0,0.3);
+        .ticket-input {
+            width: 100%; padding: 18px; 
+            background: rgba(255, 255, 255, 0.1); border: 2px solid #ffd700; 
+            border-radius: 12px; color: #ffd700; font-size: 1.4rem; outline: none;
+            text-transform: uppercase; font-weight: bold; text-align: center;
         }
 
-        #status { font-weight: bold; margin-top: 15px; padding: 10px; border-radius: 8px; display: none; }
-        .success { background: rgba(40, 167, 69, 0.2); color: #28a745; }
-        .pending { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+        .btn {
+            width: 100%; padding: 16px; border-radius: 12px; border: none;
+            font-weight: 800; font-size: 1rem; cursor: pointer; text-transform: uppercase;
+        }
+
+        .btn-start { background: #ffd700; color: #000; box-shadow: 0 0 15px rgba(255,215,0,0.3); }
+        .btn-stop { background: #ff4757; color: #fff; display: none; }
+        .btn-manual { background: #1e293b; color: #fff; border: 1px solid #334155; }
+
+        #status-msg { margin-top: 15px; font-weight: bold; padding: 10px; border-radius: 8px; display: none; }
     </style>
 </head>
 <body>
 
     <img src="1000102234-removebg-preview.png" class="logo" alt="Verified Victory" onerror="this.style.display='none'">
 
-    <div id="reader"></div>
+    <div id="interactive-container">
+        <div id="reader"></div>
+    </div>
 
-    <input type="text" id="ticketNo" class="input-box" placeholder="TICKET NO. (AA001)">
+    <div class="controls">
+        <button id="startBtn" class="btn btn-start" onclick="initScanner()">📸 Start Camera Scanner</button>
+        <button id="stopBtn" class="btn btn-stop" onclick="stopScanner()">❌ Stop Camera</button>
 
-    <button class="btn-submit" onclick="manualSubmit()">Save Ticket</button>
+        <input type="text" id="ticketInput" class="ticket-input" placeholder="AA001">
+        
+        <button class="btn btn-manual" onclick="manualSubmit()">Save Manually</button>
+    </div>
 
-    <div id="status"></div>
+    <div id="status-msg"></div>
 
     <script>
-        // SUPABASE SETUP
+        // Supabase Setup
         const SUPABASE_URL = 'https://mpsshowyrgbehjoffieh.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc3Nob3d5cmdiZWhqb2ZmaWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDA3MTUsImV4cCI6MjA4ODAxNjcxNX0.4nHVtR5edrXUjsIi_2-L8OD66ATZ9ITWT3l--nVlX6I'; 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Generate AA001 - AA100
+        const validDb = Array.from({length: 100}, (_, i) => 'AA' + String(i + 1).padStart(3, '0'));
 
-        // Valid AA001 to AA100 List
-        const validTickets = Array.from({length: 100}, (_, i) => 'AA' + String(i + 1).padStart(3, '0'));
+        let html5QrCode = null;
 
-        // SCANNER INITIALIZATION
-        // Is method mein camera permissions library khud manage karti hai
-        const html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", 
-            { 
-                fps: 10, 
-                qrbox: { width: 250, height: 150 },
-                aspectRatio: 1.0 
-            }, 
-            /* verbose= */ false
-        );
-
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-
-        function onScanSuccess(decodedText) {
-            const ticket = decodedText.trim().toUpperCase();
-            document.getElementById('ticketNo').value = ticket;
+        // Camera Chalu Karna
+        async function initScanner() {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
             
-            // Beep Sound
+            html5QrCode = new Html5Qrcode("reader");
+
+            const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+            try {
+                // environment means back camera
+                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
+            } catch (err) {
+                alert("Camera Permission Required! Please Allow Camera access.");
+                console.error(err);
+            }
+        }
+
+        // Scan Success Action
+        function onScanSuccess(decodedText) {
+            const tk = decodedText.trim().toUpperCase();
+            document.getElementById('ticketInput').value = tk;
+            
+            // Sound feedback
             try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
 
-            // AUTO SUBMIT
-            saveData(ticket);
+            // Auto Save
+            saveToSupabase(tk);
         }
 
-        function onScanFailure(error) {
-            // Scanning errors ignore karein
+        // Stop Camera
+        async function stopScanner() {
+            if (html5QrCode) {
+                try {
+                    await html5QrCode.stop();
+                    document.getElementById('startBtn').style.display = 'block';
+                    document.getElementById('stopBtn').style.display = 'none';
+                } catch(e) {}
+            }
         }
 
-        // MANUAL SUBMIT
+        // Manual Submit
         function manualSubmit() {
-            const ticket = document.getElementById('ticketNo').value.trim().toUpperCase();
-            if (!ticket) return alert("Please enter a ticket number.");
-            saveData(ticket);
+            const val = document.getElementById('ticketInput').value.trim().toUpperCase();
+            if(!val) return alert("Please enter a ticket number.");
+            saveToSupabase(val);
         }
 
-        // DATABASE SAVE LOGIC
-        async function saveData(ticket) {
-            const statusDiv = document.getElementById('status');
-            
+        // Supabase Save Logic
+        async function saveToSupabase(ticket) {
+            const status = document.getElementById('status-msg');
+
             // Validation
-            if (!validTickets.includes(ticket)) {
-                alert("❌ Error: Invalid Ticket Number (" + ticket + ")");
+            if (!validDb.includes(ticket)) {
+                alert("❌ Ticket " + ticket + " is not valid.");
                 return;
             }
 
-            // Show Saving State
-            statusDiv.innerText = "⏳ Saving to Database...";
-            statusDiv.className = "pending";
-            statusDiv.style.display = "block";
+            status.innerText = "⏳ Saving...";
+            status.style.display = "block";
+            status.style.background = "rgba(255, 215, 0, 0.2)";
 
             try {
                 const { error } = await supabase
@@ -130,18 +161,15 @@
 
                 if (error) throw error;
 
-                // Success
-                statusDiv.innerText = "✅ Successfully Saved: " + ticket;
-                statusDiv.className = "success";
-                document.getElementById('ticketNo').value = ""; // Clear input
+                // Reset after success
+                status.innerText = "✅ Saved: " + ticket;
+                status.style.background = "rgba(40, 167, 69, 0.2)";
+                document.getElementById('ticketInput').value = ""; 
                 
-                // Refresh status after 3 seconds
-                setTimeout(() => { statusDiv.style.display = "none"; }, 3000);
-
+                setTimeout(() => { status.style.display = "none"; }, 3000);
             } catch (err) {
-                console.error(err);
-                alert("❌ Database Error! Check your Supabase table name.");
-                statusDiv.style.display = "none";
+                alert("❌ Database Error! Check your Supabase table.");
+                status.style.display = "none";
             }
         }
     </script>
