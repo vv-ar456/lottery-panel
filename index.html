@@ -3,353 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verified Victory | Official Portal</title>
+    <title>Verified Victory | Quick Scan</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
 
     <style>
-        /* PREMIUM APP-LIKE STYLING */
         * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
         
         body { 
             background: linear-gradient(135deg, #050b14, #132b4a, #050b14); 
             color: white; 
-            min-height: 100vh; padding: 20px; padding-bottom: 50px;
+            min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;
         }
 
-        .app-container {
-            max-width: 450px; margin: 0 auto;
-            display: flex; flex-direction: column; gap: 20px;
-        }
-
-        /* 1. Logo Section */
-        .header-logo { text-align: center; padding: 10px 0; }
-        .header-logo img { width: 100%; max-width: 280px; filter: drop-shadow(0px 5px 15px rgba(255, 215, 0, 0.4)); }
-
-        /* Glassmorphism Cards for Steps */
         .glass-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px; padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-radius: 20px; padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%; max-width: 400px; text-align: center;
         }
 
-        .step-title {
-            font-size: 1.1rem; color: #ffd700; margin-bottom: 15px; 
-            border-bottom: 1px solid rgba(255,215,0,0.3); padding-bottom: 8px; font-weight: 600;
-        }
+        .logo-img { width: 100%; max-width: 250px; margin-bottom: 30px; filter: drop-shadow(0px 5px 15px rgba(255, 215, 0, 0.4)); }
 
-        /* Inputs & Buttons */
-        .input-style {
-            width: 100%; padding: 14px 15px; margin-bottom: 15px;
-            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); 
-            border-radius: 12px; color: white; font-size: 1rem; outline: none; transition: 0.3s;
-        }
-        .input-style::placeholder { color: rgba(255,255,255,0.4); }
-        .input-style:focus { border-color: #ffd700; background: rgba(255, 255, 255, 0.12); }
-
-        .ticket-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
-        .ticket-row input { flex: 1; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; margin-bottom: 0;}
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
         
-        .scan-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 0 18px; font-size: 1.2rem; cursor: pointer; transition: 0.3s; height: 50px; display: flex; align-items: center; justify-content: center;}
+        .ticket-input {
+            flex: 1; padding: 15px; 
+            background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.2); 
+            border-radius: 12px; color: #ffd700; font-size: 1.2rem; outline: none; transition: 0.3s;
+            text-transform: uppercase; font-weight: bold; letter-spacing: 2px; text-align: center;
+        }
+        .ticket-input:focus { border-color: #ffd700; background: rgba(255, 255, 255, 0.15); }
+        .ticket-input::placeholder { color: rgba(255,255,255,0.4); font-size: 1rem; letter-spacing: normal; font-weight: normal; }
+
+        .scan-btn { 
+            background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); 
+            border-radius: 12px; padding: 0 20px; font-size: 1.5rem; cursor: pointer; transition: 0.3s; 
+            display: flex; align-items: center; justify-content: center;
+        }
         .scan-btn:hover { background: rgba(255,215,0,0.2); border-color: #ffd700; }
-        
-        .add-btn { background: transparent; border: 1px dashed #ffd700; color: #ffd700; width: 100%; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; }
-        .add-btn:hover { background: rgba(255,215,0,0.1); }
 
-        .amount-display { text-align: center; font-size: 2.8rem; font-weight: 800; color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
-
-        /* Camera UI */
-        .camera-box { width: 100%; border-radius: 15px; overflow: hidden; border: 2px dashed rgba(255,215,0,0.4); position: relative; background: #000; aspect-ratio: 3/4; display: none; }
-        #videoElement { width: 100%; height: 100%; object-fit: cover; }
-        #photoPreview { width: 100%; height: 100%; object-fit: cover; display: none; border-radius: 15px; border: 2px solid #28a745; }
-        
-        .cam-btn { width: 100%; padding: 12px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
-        .start-cam { background: rgba(255,255,255,0.15); color: white; }
-        .capture-cam { background: #28a745; color: white; display: none; }
-        .retake-cam { background: #ff4757; color: white; display: none; }
-
-        /* Submit Button */
         .submit-btn {
-            width: 100%; padding: 18px; background: linear-gradient(90deg, #d4af37, #ffdf00); 
-            color: #0b1e36; border: none; border-radius: 15px; font-size: 1.2rem; font-weight: 800; 
-            cursor: pointer; box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4); text-transform: uppercase; letter-spacing: 1px;
+            width: 100%; padding: 15px; background: linear-gradient(90deg, #d4af37, #ffdf00); 
+            color: #0b1e36; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 800; 
+            cursor: pointer; box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4); text-transform: uppercase;
         }
 
         /* Modals & Overlays */
         #scanner-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #reader { width: 100%; max-width: 400px; border-radius: 15px; overflow: hidden; border: 2px solid #ffd700; background: white;}
-        
+        .close-btn { background: #ff4757; color: white; border: none; padding: 12px 30px; border-radius: 10px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 11, 20, 0.95); z-index: 3000; justify-content: center; align-items: center; flex-direction: column; }
         .loader { width: 60px; height: 60px; border: 5px solid rgba(255, 215, 0, 0.2); border-top-color: #ffd700; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Success Message */
+        #success-msg { display: none; color: #28a745; font-size: 1.2rem; font-weight: bold; margin-top: 15px; animation: popIn 0.3s ease; }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div id="scanner-modal">
-        <h3 style="color: #ffd700; margin-bottom: 15px;">📷 Scan Barcode</h3>
+        <h3 style="color: #ffd700; margin-bottom: 15px;">📷 Align Barcode</h3>
         <div id="reader"></div>
-        <button type="button" class="cam-btn retake-cam" style="display:block; max-width: 200px; margin-top: 20px;" onclick="closeScanner()">Cancel</button>
+        <button type="button" class="close-btn" onclick="closeScanner()">Cancel</button>
     </div>
 
     <div id="loading-overlay">
         <div class="loader"></div>
-        <div id="loading-text" style="color: #ffd700; font-weight: 600; font-size: 1.1rem; letter-spacing: 1px;">Processing...</div>
+        <div id="loading-text" style="color: #ffd700; font-weight: 600; font-size: 1.1rem; letter-spacing: 1px;">Saving Ticket...</div>
     </div>
 
-    <div class="app-container">
+    <div class="glass-card">
+        <img src="1000102234-removebg-preview.png" alt="Verified Victory" class="logo-img" onerror="this.style.display='none'">
         
-        <div class="header-logo">
-            <img src="1000102234-removebg-preview.png" alt="Verified Victory" onerror="this.style.display='none'">
+        <div class="input-group">
+            <input type="text" id="ticketNumber" class="ticket-input" placeholder="Enter Ticket (e.g. AA001)">
+            <button type="button" class="scan-btn" onclick="openScanner()">📷</button>
         </div>
 
-        <div class="glass-card">
-            <div class="step-title">01. Add Tickets</div>
-            <div id="ticket-list">
-                <div class="ticket-row">
-                    <input type="text" class="input-style ticket-input" placeholder="Enter Ticket (e.g. AA001)" oninput="updateAmount()">
-                    <button type="button" class="scan-btn" onclick="openScanner(this)">📷</button>
-                </div>
-            </div>
-            <button type="button" class="add-btn" onclick="addTicketBox()">+ Add More (Max 10)</button>
-        </div>
-
-        <div class="glass-card">
-            <div class="step-title">02. Total Payable Amount</div>
-            <div class="amount-display" id="totalAmount">₹0</div>
-        </div>
-
-        <div class="glass-card">
-            <div class="step-title">03. Customer Details</div>
-            <input type="text" id="custName" class="input-style" placeholder="Customer Full Name">
-            <input type="tel" id="custPhone" class="input-style" placeholder="10-Digit Mobile Number" maxlength="10">
-        </div>
-
-        <div class="glass-card">
-            <div class="step-title">04. Customer Photo</div>
-            <p style="font-size: 0.85rem; color: #a8b2c1; margin-bottom: 10px;">Live camera capture is mandatory.</p>
-            
-            <button type="button" class="cam-btn start-cam" id="startCamBtn" onclick="startCamera()">📸 Open Camera</button>
-            
-            <div class="camera-box" id="camera-container">
-                <video id="videoElement" autoplay playsinline muted></video>
-            </div>
-            
-            <img id="photoPreview" alt="Captured Photo">
-            <canvas id="photoCanvas" style="display: none;"></canvas>
-
-            <button type="button" class="cam-btn capture-cam" id="captureBtn" onclick="capturePhoto()">O Capture Image</button>
-            <button type="button" class="cam-btn retake-cam" id="retakeBtn" onclick="retakePhoto()">↺ Retake Photo</button>
-        </div>
-
-        <button type="button" class="submit-btn" onclick="submitData()">Save Purchase & Data</button>
-
+        <button type="button" class="submit-btn" onclick="submitTicket()">Submit Manually</button>
+        
+        <div id="success-msg">✅ Ticket Saved!</div>
     </div>
 
     <script>
-        // ==========================================
-        // 🚨 SUPABASE CONFIGURATION 🚨
-        // ==========================================
+        // SUPABASE CONFIGURATION
         const SUPABASE_URL = 'https://mpsshowyrgbehjoffieh.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc3Nob3d5cmdiZWhqb2ZmaWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDA3MTUsImV4cCI6MjA4ODAxNjcxNX0.4nHVtR5edrXUjsIi_2-L8OD66ATZ9ITWT3l--nVlX6I'; 
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const TICKET_PRICE = 20;
-
-        // Automatically Generate AA001 to AA100 array!
+        
+        // Auto-generate AA001 to AA100 valid database
         const validDatabase = Array.from({length: 100}, (_, i) => 'AA' + String(i + 1).padStart(3, '0'));
 
-        // --- TICKETS & AMOUNT LOGIC ---
-        function updateAmount() {
-            let count = 0;
-            document.querySelectorAll('.ticket-input').forEach(input => {
-                if(input.value.trim() !== "") count++;
-            });
-            document.getElementById('totalAmount').innerText = `₹${count * TICKET_PRICE}`;
-        }
-
-        function addTicketBox() {
-            const inputs = document.querySelectorAll('.ticket-input');
-            if (inputs.length >= 10) return alert("⚠️ Maximum 10 tickets allowed per customer.");
-            
-            const wrapper = document.getElementById('ticket-list');
-            const newDiv = document.createElement('div');
-            newDiv.className = "ticket-row";
-            newDiv.innerHTML = `
-                <input type="text" class="input-style ticket-input" placeholder="Enter or Scan Ticket" oninput="updateAmount()">
-                <button type="button" class="scan-btn" onclick="openScanner(this)">📷</button>
-            `;
-            wrapper.appendChild(newDiv);
-        }
-
-        // --- BARCODE SCANNER LOGIC ---
-        let currentScanInput = null;
         let html5QrCode = null;
 
-        function openScanner(btn) {
-            currentScanInput = btn.previousElementSibling; // Target the input field next to the button
+        // --- SCANNER LOGIC ---
+        function openScanner() {
             document.getElementById('scanner-modal').style.display = 'flex';
             
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
+            if (!html5QrCode) { html5QrCode = new Html5Qrcode("reader"); }
 
             html5QrCode.start(
                 { facingMode: "environment" }, 
                 { fps: 10, qrbox: { width: 250, height: 150 } }, 
                 (text) => {
-                    currentScanInput.value = text.trim().toUpperCase();
-                    updateAmount();
+                    // Jab scan successful ho
+                    document.getElementById('ticketNumber').value = text.trim().toUpperCase();
                     closeScanner();
+                    
+                    // Beep sound
                     try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
+                    
+                    // AUTO SUBMIT CALL
+                    submitTicket();
                 },
                 (err) => { /* Ignore background scanning errors */ }
             ).catch((err) => { 
-                alert("⚠️ Camera Access Denied or Not Supported by your Browser."); 
+                alert("⚠️ Camera Access Denied. Please allow permissions."); 
                 closeScanner(); 
             });
         }
 
         function closeScanner() {
             document.getElementById('scanner-modal').style.display = 'none';
-            if(html5QrCode) {
-                html5QrCode.stop().then(() => html5QrCode.clear()).catch(()=>{});
+            if(html5QrCode) { html5QrCode.stop().then(() => html5QrCode.clear()).catch(()=>{}); }
+        }
+
+        // --- SUBMIT LOGIC ---
+        async function submitTicket() {
+            const ticketInput = document.getElementById('ticketNumber');
+            const ticketVal = ticketInput.value.trim().toUpperCase();
+            const successMsg = document.getElementById('success-msg');
+
+            successMsg.style.display = 'none'; // Hide old message
+
+            if (ticketVal === "") {
+                alert("⚠️ Please enter or scan a ticket number.");
+                return;
             }
-        }
 
-        // --- LIVE CAMERA LOGIC (FIXED FOR MOBILE) ---
-        const video = document.getElementById('videoElement');
-        const canvas = document.getElementById('photoCanvas');
-        const preview = document.getElementById('photoPreview');
-        let photoBlob = null;
-        let stream = null;
-
-        async function startCamera() {
-            const startBtn = document.getElementById('startCamBtn');
-            const camContainer = document.getElementById('camera-container');
-            const captureBtn = document.getElementById('captureBtn');
-
-            try {
-                // Front camera (user) preferred for customer photos
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-                video.srcObject = stream;
-                
-                startBtn.style.display = 'none';
-                camContainer.style.display = 'block';
-                captureBtn.style.display = 'block';
-            } catch (err) {
-                alert("⚠️ Camera failed to start. Ensure camera permissions are allowed in your browser settings.");
+            if (!validDatabase.includes(ticketVal)) {
+                alert(`❌ Invalid Ticket: ${ticketVal}`);
+                return;
             }
-        }
 
-        function capturePhoto() {
-            // Draw video frame to canvas
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Convert canvas to Blob for uploading
-            canvas.toBlob(blob => { photoBlob = blob; }, 'image/jpeg', 0.8);
-            
-            // Show preview
-            preview.src = canvas.toDataURL('image/jpeg');
-            preview.style.display = 'block';
-            
-            document.getElementById('camera-container').style.display = 'none';
-            document.getElementById('captureBtn').style.display = 'none';
-            document.getElementById('retakeBtn').style.display = 'block';
-            
-            // Stop camera stream to save battery
-            if(stream) stream.getTracks().forEach(track => track.stop()); 
-        }
-
-        function retakePhoto() {
-            photoBlob = null;
-            preview.style.display = 'none';
-            document.getElementById('retakeBtn').style.display = 'none';
-            startCamera();
-        }
-
-        // --- SUBMIT TO SUPABASE ---
-        function showLoading(text) {
-            document.getElementById('loading-text').innerText = text;
             document.getElementById('loading-overlay').style.display = 'flex';
-        }
-
-        async function submitData() {
-            // 1. Gather & Validate Tickets
-            let tickets = [];
-            let invalidTickets = [];
-            
-            document.querySelectorAll('.ticket-input').forEach(input => {
-                let val = input.value.trim().toUpperCase();
-                if(val !== "") {
-                    if (validDatabase.includes(val)) tickets.push(val);
-                    else invalidTickets.push(val);
-                }
-            });
-
-            if (tickets.length === 0 && invalidTickets.length === 0) return alert("⚠️ Please enter at least 1 ticket number.");
-            if (invalidTickets.length > 0) return alert(`❌ Invalid/Fake Tickets entered: ${invalidTickets.join(', ')}`);
-            
-            // 2. Validate Customer Details
-            const custName = document.getElementById('custName').value.trim();
-            const custPhone = document.getElementById('custPhone').value.trim();
-            const amount = document.getElementById('totalAmount').innerText;
-
-            if(custName === "") return alert("⚠️ Please enter Customer Name.");
-            if(custPhone.length !== 10) return alert("⚠️ Please enter a valid 10-digit Mobile Number.");
-            
-            // 3. Validate Photo
-            if(!photoBlob) return alert("⚠️ Please capture the Customer's Photo.");
-
-            // START UPLOAD
-            showLoading("Uploading Secure Photo...");
 
             try {
-                // A. Upload Photo to Storage Bucket ('customer_photos')
-                const fileName = `photo_${Date.now()}.jpg`;
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('customer_photos')
-                    .upload(fileName, photoBlob, { contentType: 'image/jpeg' });
+                // Save to Supabase (scanned_tickets table)
+                const { error } = await supabase
+                    .from('scanned_tickets')
+                    .insert([{ ticket_number: ticketVal }]);
 
-                if (uploadError) throw new Error("Photo Upload Failed! Did you run the SQL Query for the storage bucket?");
+                if (error) throw error;
 
-                showLoading("Saving Purchase Data...");
-
-                // B. Get Public URL of the uploaded photo
-                const { data: publicUrlData } = supabase.storage
-                    .from('customer_photos')
-                    .getPublicUrl(fileName);
-                const finalPhotoUrl = publicUrlData.publicUrl;
-
-                // C. Insert Data into Table ('purchases')
-                const { error: dbError } = await supabase
-                    .from('purchases')
-                    .insert([{ 
-                        customer_name: custName, 
-                        customer_phone: custPhone, 
-                        tickets: tickets.join(', '), 
-                        total_amount: amount, 
-                        photo_url: finalPhotoUrl
-                    }]);
-
-                if (dbError) throw new Error("Database Save Failed! Did you create the table properly?");
-
-                // D. Success
+                // Success Actions
                 document.getElementById('loading-overlay').style.display = 'none';
-                alert("🎉 SUCCESS! Tickets sold and data secured in Supabase.");
+                ticketInput.value = ""; // Clear input for next scan
                 
-                // Refresh page for next customer
-                window.location.reload();
+                // Show temporary success message
+                successMsg.style.display = 'block';
+                setTimeout(() => { successMsg.style.display = 'none'; }, 2500);
 
             } catch (err) {
                 document.getElementById('loading-overlay').style.display = 'none';
-                alert(`❌ ERROR: ${err.message}`);
+                alert(`❌ Database Error: Please check internet or table settings.`);
                 console.error(err);
             }
         }
