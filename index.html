@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Verified Victory | Fast Scan</title>
+    <title>Verified Victory | Native Scan</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
 
     <style>
-        /* PREMIUM MOBILE-FIRST STYLING */
         * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
         
         body { 
@@ -33,18 +32,12 @@
             filter: drop-shadow(0px 5px 15px rgba(255, 215, 0, 0.4)); 
         }
 
-        /* FIXED MOBILE LAYOUT FOR INPUT & BUTTON */
         .input-group { 
-            display: flex; 
-            width: 100%; 
-            gap: 10px; 
-            margin-bottom: 20px; 
+            display: flex; width: 100%; gap: 10px; margin-bottom: 20px; 
         }
         
         .ticket-input {
-            flex: 1; /* Takes remaining space */
-            min-width: 0; /* Ensures it doesn't push the button out of screen */
-            padding: 15px; 
+            flex: 1; min-width: 0; padding: 15px; 
             background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.2); 
             border-radius: 12px; color: #ffd700; font-size: 1.1rem; outline: none; transition: 0.3s;
             text-transform: uppercase; font-weight: bold; letter-spacing: 2px; text-align: center;
@@ -52,9 +45,11 @@
         .ticket-input:focus { border-color: #ffd700; background: rgba(255, 255, 255, 0.15); }
         .ticket-input::placeholder { color: rgba(255,255,255,0.4); font-size: 0.9rem; letter-spacing: normal; font-weight: normal; }
 
+        /* Hidden File Input for Native Camera */
+        #native-camera-input { display: none; }
+
         .scan-btn { 
-            flex-shrink: 0; /* Button will never shrink */
-            width: 60px; height: 60px; /* Fixed square box */
+            flex-shrink: 0; width: 60px; height: 60px; 
             background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); 
             border-radius: 12px; font-size: 1.5rem; cursor: pointer; transition: 0.3s; 
             display: flex; align-items: center; justify-content: center; padding: 0;
@@ -67,39 +62,31 @@
             cursor: pointer; box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4); text-transform: uppercase;
         }
 
-        /* Modals & Overlays */
-        #scanner-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        #reader { width: 100%; max-width: 350px; border-radius: 15px; overflow: hidden; border: 2px solid #ffd700; background: white;}
-        .close-btn { background: #ff4757; color: white; border: none; padding: 12px 30px; border-radius: 10px; font-weight: bold; margin-top: 20px; cursor: pointer; width: 100%; max-width: 200px; }
-
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 11, 20, 0.95); z-index: 10000; justify-content: center; align-items: center; flex-direction: column; }
         .loader { width: 60px; height: 60px; border: 5px solid rgba(255, 215, 0, 0.2); border-top-color: #ffd700; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Success Message */
         #success-msg { display: none; color: #28a745; font-size: 1.2rem; font-weight: bold; margin-top: 20px; animation: popIn 0.3s ease; }
         @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div id="scanner-modal">
-        <h3 style="color: #ffd700; margin-bottom: 15px;">📷 Scan Ticket Barcode</h3>
-        <div id="reader"></div>
-        <button type="button" class="close-btn" onclick="closeScanner()">Close Camera</button>
-    </div>
-
     <div id="loading-overlay">
         <div class="loader"></div>
-        <div id="loading-text" style="color: #ffd700; font-weight: 600; font-size: 1.1rem; letter-spacing: 1px;">Saving Ticket...</div>
+        <div id="loading-text" style="color: #ffd700; font-weight: 600; font-size: 1.1rem; letter-spacing: 1px;">Processing...</div>
     </div>
+
+    <div id="reader" style="display: none;"></div>
 
     <div class="glass-card">
         <img src="1000102234-removebg-preview.png" alt="Verified Victory" class="logo-img" onerror="this.style.display='none'">
         
         <div class="input-group">
             <input type="text" id="ticketNumber" class="ticket-input" placeholder="Ticket No. (e.g. AA001)">
-            <button type="button" class="scan-btn" onclick="openScanner()">📷</button>
+            
+            <input type="file" id="native-camera-input" accept="image/*" capture="environment" onchange="processImageScan(event)">
+            <button type="button" class="scan-btn" onclick="document.getElementById('native-camera-input').click()">📷</button>
         </div>
 
         <button type="button" class="submit-btn" onclick="submitTicket()">Submit Ticket</button>
@@ -113,46 +100,35 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc3Nob3d5cmdiZWhqb2ZmaWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDA3MTUsImV4cCI6MjA4ODAxNjcxNX0.4nHVtR5edrXUjsIi_2-L8OD66ATZ9ITWT3l--nVlX6I'; 
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // Auto-generate AA001 to AA100 database
         const validDatabase = Array.from({length: 100}, (_, i) => 'AA' + String(i + 1).padStart(3, '0'));
 
-        let html5QrCode = null;
+        const html5QrCode = new Html5Qrcode("reader");
 
-        // --- SCANNER LOGIC (ROBUST VERSION) ---
-        function openScanner() {
-            document.getElementById('scanner-modal').style.display = 'flex';
+        // --- NATIVE CAMERA SCAN LOGIC ---
+        function processImageScan(event) {
+            if (event.target.files.length == 0) return;
             
-            if (!html5QrCode) { 
-                html5QrCode = new Html5Qrcode("reader"); 
-            }
+            const imageFile = event.target.files[0];
+            
+            // Show scanning text
+            document.getElementById('loading-text').innerText = "Reading Barcode...";
+            document.getElementById('loading-overlay').style.display = 'flex';
 
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 150 } }, 
-                (text) => {
-                    // Jab scan successful ho
-                    document.getElementById('ticketNumber').value = text.trim().toUpperCase();
-                    closeScanner();
-                    
-                    // Beep sound
+            html5QrCode.scanFile(imageFile, true)
+                .then(decodedText => {
+                    // Agar scan successful raha
+                    document.getElementById('ticketNumber').value = decodedText.trim().toUpperCase();
                     try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
                     
-                    // AUTO SUBMIT CALL
+                    // Auto Submit
                     submitTicket();
-                },
-                (err) => { /* Background scanning errors ignore honge */ }
-            ).catch((err) => { 
-                alert("⚠️ Camera Access Denied. Please check browser permissions."); 
-                closeScanner(); 
-            });
-        }
-
-        function closeScanner() {
-            document.getElementById('scanner-modal').style.display = 'none';
-            if(html5QrCode) { 
-                html5QrCode.stop().then(() => html5QrCode.clear()).catch(()=>{}); 
-            }
+                })
+                .catch(err => {
+                    // Agar barcode clear na ho
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    alert("⚠️ Could not read the barcode clearly. Please retake the photo or type manually.");
+                    document.getElementById('native-camera-input').value = ""; // Reset input
+                });
         }
 
         // --- SUBMIT LOGIC ---
@@ -161,41 +137,41 @@
             const ticketVal = ticketInput.value.trim().toUpperCase();
             const successMsg = document.getElementById('success-msg');
 
-            successMsg.style.display = 'none'; // Hide old message
+            successMsg.style.display = 'none';
 
-            // Basic Validation
             if (ticketVal === "") {
                 alert("⚠️ Please enter or scan a ticket number.");
+                document.getElementById('loading-overlay').style.display = 'none';
                 return;
             }
 
             if (!validDatabase.includes(ticketVal)) {
                 alert(`❌ Invalid Ticket: ${ticketVal}. Expected format: AA001 to AA100`);
+                document.getElementById('loading-overlay').style.display = 'none';
                 return;
             }
 
-            // Show Loading
+            document.getElementById('loading-text').innerText = "Saving Ticket...";
             document.getElementById('loading-overlay').style.display = 'flex';
 
             try {
-                // Save to Supabase
                 const { error } = await supabase
                     .from('scanned_tickets')
                     .insert([{ ticket_number: ticketVal }]);
 
                 if (error) throw error;
 
-                // Success Actions
+                // Success
                 document.getElementById('loading-overlay').style.display = 'none';
-                ticketInput.value = ""; // Clear box for next ticket
+                ticketInput.value = ""; 
+                document.getElementById('native-camera-input').value = ""; 
                 
-                // Show Success Message
                 successMsg.style.display = 'block';
                 setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
 
             } catch (err) {
                 document.getElementById('loading-overlay').style.display = 'none';
-                alert(`❌ Database Error: Ensure your 'scanned_tickets' table is created and RLS is disabled in Supabase.`);
+                alert(`❌ Database Error: Ensure your 'scanned_tickets' table is created and RLS is disabled.`);
                 console.error(err);
             }
         }
