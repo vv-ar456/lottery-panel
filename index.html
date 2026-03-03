@@ -3,81 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Verified Victory | Scanner</title>
+    <title>Verified Victory | Pro Scanner</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
         * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+        body { background: #050b14; color: white; text-align: center; padding: 20px; }
         
-        body { 
-            background: #050b14; color: white; 
-            min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px;
-        }
-
-        .logo { width: 100%; max-width: 250px; margin-bottom: 20px; }
-
-        /* Scanner Window - Mobile Responsive */
-        #interactive-container {
-            width: 100%;
-            max-width: 380px;
-            aspect-ratio: 1/1;
+        /* Logo aur Header */
+        .logo { width: 100%; max-width: 220px; margin: 20px 0; }
+        
+        /* Scanner Area - Iska size fixed rakha hai */
+        #reader { 
+            width: 100%; max-width: 350px; 
+            margin: 0 auto 20px auto; 
+            border: 2px solid #ffd700; 
+            border-radius: 15px; 
+            overflow: hidden; 
             background: #000;
-            border: 2px solid #ffd700;
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            margin-bottom: 20px;
         }
 
-        #reader { width: 100%; height: 100%; }
-
-        .controls {
-            width: 100%;
-            max-width: 380px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        /* Buttons & Inputs - Ek ke niche ek (Full Width) */
+        .controls { width: 100%; max-width: 350px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
+        
+        .ticket-box { 
+            width: 100%; padding: 15px; font-size: 22px; font-weight: bold;
+            background: #111d2f; border: 2px solid #ffd700; border-radius: 10px;
+            color: #ffd700; text-align: center; text-transform: uppercase;
         }
 
-        .ticket-input {
-            width: 100%; padding: 18px; 
-            background: rgba(255, 255, 255, 0.1); border: 2px solid #ffd700; 
-            border-radius: 12px; color: #ffd700; font-size: 1.4rem; outline: none;
-            text-transform: uppercase; font-weight: bold; text-align: center;
-        }
+        .btn { width: 100%; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 10px; border: none; cursor: pointer; text-transform: uppercase; }
+        .btn-scan { background: #ffd700; color: #000; }
+        .btn-stop { background: #ef4444; color: white; display: none; }
+        .btn-save { background: #1e293b; color: white; border: 1px solid #334155; }
 
-        .btn {
-            width: 100%; padding: 16px; border-radius: 12px; border: none;
-            font-weight: 800; font-size: 1rem; cursor: pointer; text-transform: uppercase;
-        }
-
-        .btn-start { background: #ffd700; color: #000; box-shadow: 0 0 15px rgba(255,215,0,0.3); }
-        .btn-stop { background: #ff4757; color: #fff; display: none; }
-        .btn-manual { background: #1e293b; color: #fff; border: 1px solid #334155; }
-
-        #status-msg { margin-top: 15px; font-weight: bold; padding: 10px; border-radius: 8px; display: none; }
+        #status { margin-top: 15px; font-weight: bold; padding: 10px; border-radius: 8px; display: none; }
     </style>
 </head>
 <body>
 
     <img src="1000102234-removebg-preview.png" class="logo" alt="Verified Victory" onerror="this.style.display='none'">
 
-    <div id="interactive-container">
-        <div id="reader"></div>
-    </div>
+    <div id="reader"></div>
 
     <div class="controls">
-        <button id="startBtn" class="btn btn-start" onclick="initScanner()">📸 Start Camera Scanner</button>
-        <button id="stopBtn" class="btn btn-stop" onclick="stopScanner()">❌ Stop Camera</button>
+        <button id="startBtn" class="btn btn-scan" onclick="startCamera()">📷 Start Scanner</button>
+        <button id="stopBtn" class="btn btn-stop" onclick="stopCamera()">❌ Close Camera</button>
 
-        <input type="text" id="ticketInput" class="ticket-input" placeholder="AA001">
+        <input type="text" id="ticketInput" class="ticket-box" placeholder="AA001">
         
-        <button class="btn btn-manual" onclick="manualSubmit()">Save Manually</button>
+        <button class="btn btn-save" onclick="manualSave()">💾 Save Ticket</button>
     </div>
 
-    <div id="status-msg"></div>
+    <div id="status"></div>
 
     <script>
         // Supabase Setup
@@ -85,90 +65,75 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc3Nob3d5cmdiZWhqb2ZmaWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDA3MTUsImV4cCI6MjA4ODAxNjcxNX0.4nHVtR5edrXUjsIi_2-L8OD66ATZ9ITWT3l--nVlX6I'; 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        // Generate AA001 - AA100
         const validDb = Array.from({length: 100}, (_, i) => 'AA' + String(i + 1).padStart(3, '0'));
+        let scanner = null;
 
-        let html5QrCode = null;
+        // CAMERA START (Pure Javascript - No interference)
+        async function startCamera() {
+            document.getElementById('reader').style.display = 'block';
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'block';
 
-        // Camera Chalu Karna
-        async function initScanner() {
-            const startBtn = document.getElementById('startBtn');
-            const stopBtn = document.getElementById('stopBtn');
-            
-            html5QrCode = new Html5Qrcode("reader");
-
+            scanner = new Html5Qrcode("reader");
             const config = { fps: 10, qrbox: { width: 250, height: 150 } };
 
             try {
-                // environment means back camera
-                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-                startBtn.style.display = 'none';
-                stopBtn.style.display = 'block';
+                await scanner.start({ facingMode: "environment" }, config, (decodedText) => {
+                    document.getElementById('ticketInput').value = decodedText.trim().toUpperCase();
+                    try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
+                    
+                    // Auto-Save after scan
+                    saveData(decodedText.trim().toUpperCase());
+                });
             } catch (err) {
-                alert("Camera Permission Required! Please Allow Camera access.");
-                console.error(err);
+                alert("Camera Error: Please use Chrome/Safari and Allow Permissions.");
+                stopCamera();
             }
         }
 
-        // Scan Success Action
-        function onScanSuccess(decodedText) {
-            const tk = decodedText.trim().toUpperCase();
-            document.getElementById('ticketInput').value = tk;
-            
-            // Sound feedback
-            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
-
-            // Auto Save
-            saveToSupabase(tk);
-        }
-
-        // Stop Camera
-        async function stopScanner() {
-            if (html5QrCode) {
-                try {
-                    await html5QrCode.stop();
+        function stopCamera() {
+            if (scanner) {
+                scanner.stop().then(() => {
+                    scanner.clear();
+                    document.getElementById('reader').style.display = 'none';
                     document.getElementById('startBtn').style.display = 'block';
                     document.getElementById('stopBtn').style.display = 'none';
-                } catch(e) {}
+                }).catch(e => console.log(e));
             }
         }
 
-        // Manual Submit
-        function manualSubmit() {
+        function manualSave() {
             const val = document.getElementById('ticketInput').value.trim().toUpperCase();
-            if(!val) return alert("Please enter a ticket number.");
-            saveToSupabase(val);
+            if(val) saveData(val);
         }
 
-        // Supabase Save Logic
-        async function saveToSupabase(ticket) {
-            const status = document.getElementById('status-msg');
-
-            // Validation
+        // DATA SAVE LOGIC
+        async function saveData(ticket) {
+            const status = document.getElementById('status');
+            
             if (!validDb.includes(ticket)) {
-                alert("❌ Ticket " + ticket + " is not valid.");
+                alert("❌ Invalid Ticket: " + ticket);
                 return;
             }
 
             status.innerText = "⏳ Saving...";
             status.style.display = "block";
-            status.style.background = "rgba(255, 215, 0, 0.2)";
+            status.style.color = "#ffd700";
 
             try {
-                const { error } = await supabase
-                    .from('scanned_tickets')
-                    .insert([{ ticket_number: ticket }]);
-
+                const { error } = await supabase.from('scanned_tickets').insert([{ ticket_number: ticket }]);
                 if (error) throw error;
 
-                // Reset after success
                 status.innerText = "✅ Saved: " + ticket;
-                status.style.background = "rgba(40, 167, 69, 0.2)";
-                document.getElementById('ticketInput').value = ""; 
+                status.style.color = "#28a745";
+                document.getElementById('ticketInput').value = "";
+                
+                // Camera band kar do scan ke baad (UX fix)
+                stopCamera();
                 
                 setTimeout(() => { status.style.display = "none"; }, 3000);
             } catch (err) {
-                alert("❌ Database Error! Check your Supabase table.");
+                alert("Database Error! Table 'scanned_tickets' check karein.");
                 status.style.display = "none";
             }
         }
