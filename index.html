@@ -3,190 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Verified Victory | Terminal</title>
+    <title>Verified Victory | Official Portal</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
 
     <style>
-        /* CLEAN, ULTRA-FAST TERMINAL UI */
+        /* PREMIUM DARK UI */
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
+        
         body { 
-            background-color: #0b1120; 
-            color: #ffffff; 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 90vh;
+            background: linear-gradient(135deg, #050b14, #132b4a); 
+            color: white; min-height: 100vh; display: flex; 
+            justify-content: center; align-items: center; padding: 15px;
         }
 
-        .container {
-            width: 100%;
-            max-width: 400px;
-            background: #1e293b;
-            padding: 30px 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        .card {
+            width: 100%; max-width: 400px; background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px); border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             text-align: center;
         }
 
-        .logo { width: 100%; max-width: 200px; margin-bottom: 30px; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3)); }
+        .logo { width: 100%; max-width: 200px; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3)); }
 
-        .instruction {
-            color: #94a3b8;
-            font-size: 14px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        /* STEPS LOGIC */
+        .step { display: none; animation: fadeIn 0.4s ease; }
+        .step.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Bada Input Box Taaki Tap Karna Aasan Ho */
-        .scan-box {
-            width: 100%; 
-            padding: 20px; 
-            font-size: 28px; 
-            font-weight: 900;
-            text-align: center; 
-            border: 3px solid #ffd700; 
-            border-radius: 12px; 
-            background: #0f172a; 
-            color: #ffd700;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            box-sizing: border-box;
-            outline: none;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-        }
+        .title { color: #ffd700; font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
 
-        .scan-box:focus {
-            border-color: #28a745;
-            box-shadow: 0 0 15px rgba(40, 167, 69, 0.4);
+        /* INPUTS & BUTTONS */
+        .input-box {
+            width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold;
+            background: rgba(0,0,0,0.3); border: 2px solid #334155; 
+            border-radius: 10px; color: #ffd700; margin-bottom: 15px;
+            text-align: center; outline: none; text-transform: uppercase;
         }
+        .input-box:focus { border-color: #ffd700; }
+        .input-box::placeholder { color: rgba(255,255,255,0.3); font-size: 1rem; font-weight: normal; }
 
-        .scan-box::placeholder {
-            color: rgba(255,255,255,0.2);
-            font-size: 18px;
-            font-weight: normal;
+        .btn {
+            width: 100%; padding: 15px; border: none; border-radius: 10px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-bottom: 15px;
+            text-transform: uppercase; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 10px;
         }
+        .btn-gold { background: linear-gradient(90deg, #d4af37, #ffdf00); color: #000; box-shadow: 0 4px 15px rgba(255,215,0,0.3); }
+        .btn-dark { background: #334155; color: white; border: 1px solid #475569; }
+        .btn-success { background: #28a745; color: white; }
 
-        /* Status Messages */
-        #status {
-            padding: 15px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 18px;
-            display: none;
-            text-transform: uppercase;
-        }
+        /* TICKET BADGES */
+        .ticket-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .badge { background: rgba(255,215,0,0.1); border: 1px solid #ffd700; color: #ffd700; padding: 8px 15px; border-radius: 8px; font-weight: bold; letter-spacing: 1px; }
+
+        /* PHOTO PREVIEW */
+        .photo-preview { width: 100%; height: 200px; border-radius: 10px; object-fit: cover; display: none; margin-bottom: 15px; border: 2px solid #28a745; }
+
+        /* HIDDEN ELEMENTS */
+        .hidden-file { display: none; }
+        #hidden-reader { display: none; }
+
+        /* OVERLAY */
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
+        .loader { border: 5px solid rgba(255,215,0,0.2); border-top: 5px solid #ffd700; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .overlay-text { color: #ffd700; font-weight: bold; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div id="overlay">
+        <div class="loader"></div>
+        <div class="overlay-text" id="overlay-msg">Processing...</div>
+    </div>
+
+    <div id="hidden-reader"></div>
+
+    <div class="card">
         <img src="1000102234-removebg-preview.png" class="logo" alt="Verified Victory" onerror="this.style.display='none'">
 
-        <div class="instruction">Tap below and use Scanner Keyboard</div>
+        <div id="step1" class="step active">
+            <div class="title">Step 1: First Ticket</div>
+            
+            <input type="text" id="manualTicket1" class="input-box" placeholder="TYPE TICKET NO. (e.g. AA001)">
+            <button class="btn btn-dark" onclick="addManualTicket()">➡️ Proceed with typed ticket</button>
+            
+            <div style="margin: 15px 0; color: #64748b; font-weight: bold;">OR</div>
 
-        <input type="text" id="ticketInput" class="scan-box" placeholder="SCAN OR TYPE HERE" autocomplete="off" autocorrect="off" spellcheck="false" autofocus>
+            <input type="file" id="barcodeFile1" class="hidden-file" accept="image/*" capture="environment" onchange="scanBarcode(event)">
+            <button class="btn btn-gold" onclick="document.getElementById('barcodeFile1').click()">📷 SCAN TICKET</button>
+        </div>
 
-        <div id="status"></div>
+        <div id="step2" class="step">
+            <div class="title">Step 2: Added Tickets (<span id="ticketCount">1</span>/10)</div>
+            
+            <div class="ticket-list" id="ticketBadgeContainer">
+                </div>
+
+            <input type="file" id="barcodeFileMore" class="hidden-file" accept="image/*" capture="environment" onchange="scanBarcode(event)">
+            <button class="btn btn-dark" id="addMoreBtn" onclick="document.getElementById('barcodeFileMore').click()">➕ SCAN MORE TICKET</button>
+            
+            <button class="btn btn-gold" onclick="goToStep3()">⏭️ SKIP / NEXT STEP</button>
+        </div>
+
+        <div id="step3" class="step">
+            <div class="title">Step 3: Customer Details</div>
+            
+            <div style="color: #ffd700; font-weight: bold; font-size: 1.2rem; margin-bottom: 15px;">
+                Total Amount: <span id="totalAmountText">₹0</span>
+            </div>
+
+            <input type="text" id="custName" class="input-box" placeholder="CUSTOMER NAME">
+            <input type="tel" id="custPhone" class="input-box" placeholder="10-DIGIT MOBILE NO." maxlength="10">
+
+            <img id="photoPreview" class="photo-preview">
+
+            <input type="file" id="customerFaceFile" class="hidden-file" accept="image/*" capture="user" onchange="previewCustomerPhoto(event)">
+            <button class="btn btn-dark" id="captureFaceBtn" onclick="document.getElementById('customerFaceFile').click()">📸 TAKE CUSTOMER PHOTO</button>
+
+            <button class="btn btn-success" onclick="submitFinalData()">🚀 SUBMIT & SAVE</button>
+        </div>
+
     </div>
 
     <script>
-        // =====================================
-        // 1. SUPABASE CONNECTION
-        // =====================================
+        // SUPABASE CONFIGURATION
         const SUPABASE_URL = 'https://mpsshowyrgbehjoffieh.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wc3Nob3d5cmdiZWhqb2ZmaWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NDA3MTUsImV4cCI6MjA4ODAxNjcxNX0.4nHVtR5edrXUjsIi_2-L8OD66ATZ9ITWT3l--nVlX6I'; 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        // Valid Tickets: AA001 to AA100
         const validDb = Array.from({length: 100}, (_, i) => 'AA' + String(i + 1).padStart(3, '0'));
+        const TICKET_PRICE = 20;
 
-        let isProcessing = false;
+        let selectedTickets = [];
+        let customerPhotoBlob = null;
+        let html5QrCode = new Html5Qrcode("hidden-reader");
 
-        // =====================================
-        // 2. AUTO-SUBMIT LOGIC (Keyboard Listener)
-        // =====================================
-        const ticketInput = document.getElementById('ticketInput');
+        // --- UI NAVIGATION ---
+        function showStep(stepId) {
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+            document.getElementById(stepId).classList.add('active');
+        }
 
-        // Method A: Length Check (Agar scanner bina enter dabaye input deta hai)
-        ticketInput.addEventListener('input', function() {
-            let val = this.value.trim().toUpperCase();
+        function showLoading(msg) {
+            document.getElementById('overlay-msg').innerText = msg;
+            document.getElementById('overlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        // --- TICKET PROCESSING ---
+        function addManualTicket() {
+            const tk = document.getElementById('manualTicket1').value.trim().toUpperCase();
+            processTicket(tk);
+        }
+
+        async function scanBarcode(event) {
+            if (!event.target.files || event.target.files.length === 0) return;
+            const file = event.target.files[0];
             
-            // Agar 5 letters pure ho gaye aur "AA" se shuru hota hai
-            if (val.length === 5 && val.startsWith("AA")) {
-                processTicket(val);
+            showLoading("Scanning Barcode...");
+            try {
+                const decodedText = await html5QrCode.scanFile(file, true);
+                processTicket(decodedText.trim().toUpperCase());
+            } catch (err) {
+                alert("⚠️ Barcode not clear. Please take a closer photo or type manually.");
+            } finally {
+                hideLoading();
+                event.target.value = ""; // Reset input
             }
-        });
+        }
 
-        // Method B: Enter Key Check (Agar scanner type karne ke baad auto-Enter marta hai)
-        ticketInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                let val = this.value.trim().toUpperCase();
-                processTicket(val);
-            }
-        });
-
-        // =====================================
-        // 3. DATABASE SAVE FUNCTION
-        // =====================================
-        async function processTicket(ticket) {
-            if (isProcessing) return; // Prevent double firing
-            isProcessing = true;
+        function processTicket(tk) {
+            if (!tk) return alert("Please enter/scan a ticket.");
+            if (!validDb.includes(tk)) return alert("❌ Invalid Ticket: " + tk);
+            if (selectedTickets.includes(tk)) return alert("⚠️ Ticket already added!");
             
-            const statusBox = document.getElementById('status');
-            
-            // Validation Check
-            if (!validDb.includes(ticket)) {
-                showStatus("❌ Invalid Ticket: " + ticket, "#ff4d4d");
-                resetInput();
+            if (selectedTickets.length >= 10) {
+                alert("Maximum 10 tickets allowed!");
                 return;
             }
 
-            // Processing State
-            showStatus("⏳ Saving...", "#ffd700", "#000");
+            selectedTickets.push(tk);
+            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
 
-            try {
-                // Send to Supabase
-                const { error } = await supabase.from('scanned_tickets').insert([{ ticket_number: ticket }]);
-                if (error) throw error;
+            updateTicketList();
+            showStep('step2');
+        }
 
-                // Success State
-                try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
-                showStatus("✅ Saved: " + ticket, "#28a745");
-                resetInput();
+        function updateTicketList() {
+            const container = document.getElementById('ticketBadgeContainer');
+            document.getElementById('ticketCount').innerText = selectedTickets.length;
+            
+            container.innerHTML = "";
+            selectedTickets.forEach(tk => {
+                container.innerHTML += `<div class="badge">${tk}</div>`;
+            });
 
-            } catch (err) {
-                console.error(err);
-                showStatus("❌ DB Error!", "#ff4d4d");
-                resetInput();
+            if (selectedTickets.length >= 10) {
+                document.getElementById('addMoreBtn').style.display = 'none';
             }
         }
 
-        // =====================================
-        // 4. HELPER FUNCTIONS
-        // =====================================
-        function showStatus(text, bgColor, color = "#fff") {
-            const statusBox = document.getElementById('status');
-            statusBox.innerText = text;
-            statusBox.style.background = bgColor;
-            statusBox.style.color = color;
-            statusBox.style.display = "block";
+        function goToStep3() {
+            document.getElementById('totalAmountText').innerText = `₹${selectedTickets.length * TICKET_PRICE}`;
+            showStep('step3');
         }
 
-        function resetInput() {
-            const ticketInput = document.getElementById('ticketInput');
-            ticketInput.value = "";
-            
-            setTimeout(() => { 
-                document.getElementById('status').style.display = "none"; 
-                isProcessing = false;
-                ticketInput.focus(); // Keep keyboard open for next scan
-            }, 2000);
+        // --- CUSTOMER PHOTO HANDLING ---
+        function previewCustomerPhoto(event) {
+            if (!event.target.files || event.target.files.length === 0) return;
+            const file = event.target.files[0];
+            customerPhotoBlob = file;
+
+            const preview = document.getElementById('photoPreview');
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+
+            document.getElementById('captureFaceBtn').innerText = "🔄 RETAKE PHOTO";
+        }
+
+        // --- FINAL SUBMISSION ---
+        async function submitFinalData() {
+            const name = document.getElementById('custName').value.trim();
+            const phone = document.getElementById('custPhone').value.trim();
+
+            if (!name) return alert("⚠️ Enter Customer Name.");
+            if (phone.length !== 10) return alert("⚠️ Enter 10-Digit Mobile Number.");
+            if (!customerPhotoBlob) return alert("⚠️ Customer Photo is required!");
+
+            showLoading("Uploading Photo...");
+
+            try {
+                // 1. Upload Photo to Storage Bucket 'customer_photos'
+                const fileName = `photo_${Date.now()}.jpg`;
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('customer_photos')
+                    .upload(fileName, customerPhotoBlob, { contentType: 'image/jpeg' });
+
+                if (uploadError) throw new Error("Photo upload failed. Did you create 'customer_photos' bucket?");
+
+                showLoading("Saving Data...");
+
+                // 2. Get Public URL
+                const { data: publicUrlData } = supabase.storage
+                    .from('customer_photos')
+                    .getPublicUrl(fileName);
+                const photoUrl = publicUrlData.publicUrl;
+
+                // 3. Save to 'purchases' table
+                const { error: dbError } = await supabase
+                    .from('purchases')
+                    .insert([{ 
+                        customer_name: name, 
+                        customer_phone: phone, 
+                        tickets: selectedTickets.join(', '), 
+                        total_amount: `₹${selectedTickets.length * TICKET_PRICE}`, 
+                        photo_url: photoUrl
+                    }]);
+
+                if (dbError) throw new Error("Database error. Did you recreate the 'purchases' table?");
+
+                // 4. Success
+                hideLoading();
+                alert("🎉 SUCCESS! Purchase Saved.");
+                window.location.reload(); // Refresh for next customer
+
+            } catch (err) {
+                hideLoading();
+                alert(`❌ ERROR: ${err.message}`);
+                console.error(err);
+            }
         }
     </script>
 </body>
